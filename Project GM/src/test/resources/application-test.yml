@@ -1,0 +1,20 @@
+spring:
+  profiles:
+    on-profile: test
+  datasource:
+    url: ${TEST_DATABASE_URL:jdbc:postgresql://localhost:5432/project_gm_test}
+    username: admin_test
+    password: admin_test
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    show-sql: false
+
+  flyway:
+    clean-disabled: false
+
+openai:
+  enabled: false
+
+security:
+  development-user-enabled: true
