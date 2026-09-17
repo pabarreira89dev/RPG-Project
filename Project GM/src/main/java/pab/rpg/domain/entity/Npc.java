@@ -1,6 +1,7 @@
 package pab.rpg.domain.entity;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -46,5 +47,12 @@ public class Npc {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private NpcStatus status;
+
+    // Needed for combat (initiative, attack rolls); defaults were backfilled for the pre-existing seed NPCs.
+    @Embedded
+    private AttributeSet attributes;
+
+    @Column(nullable = false)
+    private int healthMaximum;
 
 }

@@ -293,6 +293,32 @@ Todavía no hay ninguna integración entre `ActionServiceImpl`/interpretación d
 
 Test añadido: `QuestServiceImplTest` con Mockito (misión desconocida, arranque idempotente, transición inválida, misión ya completada, transición válida que completa la misión, listado de misiones visibles).
 
+### Punto 6 implementado: combate básico
+
+Migración `Project GM/src/main/resources/db/migration/V6__create_combat_and_combat_participant.sql`: añade `strength`/`agility`/`intellect`/`willpower`/`perception`/`presence`/`health_maximum` a `npc` (con valores concretos por NPC seed, necesarios para iniciativa y ataques), y crea `combat` (`session_id`, `status` ACTIVE/COMPLETED, `round_number`, `current_turn_order`, `created_at`, `ended_at`; índice único parcial que solo permite un combate ACTIVE por sesión) y `combat_participant` (`combat_id`, `team` PLAYER/ENEMY, `character_id` o `npc_id` -exactamente uno-, `name`, `initiative`, `turn_order` único por combate, `actions_remaining`, `health_current`/`health_maximum`, `status` ACTIVE/DOWNED/DEAD).
+
+Entidad `Npc` ahora también tiene `attributes` (`AttributeSet`, mismo embeddable que `Character`) y `healthMaximum`, para poder tratar a los NPCs como combatientes con las mismas reglas que el jugador.
+
+Entidades nuevas en `domain.entity`: `Combat` (con `advanceTurn`, `startNewRound`, `complete`), `CombatParticipant` (con `consumeAction`, `resetActions`, `applyDamage` -a 0 de salud pasa a `DOWNED`, nunca a `DEAD` todavía-), `CombatStatus`, `CombatTeam`, `CombatParticipantStatus` (`DEAD` queda reservado para reglas de muerte futuras, sección 12 del GDD). Repositorios nuevos: `CombatRepository` (`findBySessionIdAndStatus`), `CombatParticipantRepository` (`findAllByCombatIdOrderByTurnOrderAsc`).
+
+Servicio nuevo `pab.rpg.service.CombatService` (con `CombatView`/`ParticipantView` anidados, mismo patrón que `QuestService.QuestStateView`) / `impl.CombatServiceImpl`:
+
+- `startCombat(sessionId, npcIds)`: rechaza si ya hay un combate ACTIVE en la sesión, o si algún NPC no existe/no está `ALIVE`/no está en la localización actual de la sesión (`CombatNotAllowedException`). Crea un participante PLAYER a partir del `Character` de la sesión y un participante ENEMY por cada NPC, tira iniciativa (`d20 + modificador de Agilidad`, con `SecureRandom`, sin persistir semilla porque no es una tirada de acción auditable como las de `CheckResolver`) y ordena por iniciativa descendente para asignar `turn_order`. Añade evento `COMBAT_STARTED`.
+- `performAttack(sessionId, combatId, attackerParticipantId, targetParticipantId)`: valida que el combate esté ACTIVE, que sea el turno del atacante (`current_turn_order`), que el atacante esté `ACTIVE` y tenga acciones, y que el objetivo esté en el equipo contrario y `ACTIVE` (`CombatNotAllowedException` en cualquier otro caso). Resuelve el ataque con `CheckResolver` (atributo Fuerza del atacante -de `Character` o `Npc` según corresponda-, dificultad fija `MODERATE`, igual de provisional que en `ActionServiceImpl` hasta que existan armas/`Item`). El daño sale de una tabla fija por `ResultGrade` (`GRAN_EXITO` 8, `EXITO` 5, `EXITO_CON_COSTE` 3, fracasos 0), ya que todavía no existe sistema de objetos/armas. Añade evento `COMBAT_ATTACK_RESOLVED`; si un bando queda sin participantes `ACTIVE`, marca el combate `COMPLETED` y añade `COMBAT_ENDED` con `outcome` VICTORY/DEFEAT; si no, cuando el atacante agota sus 2 acciones pasa el turno al siguiente participante `ACTIVE` en orden de iniciativa, y si se vuelve a la cabeza de la lista incrementa `round_number` y resetea las acciones de todos los participantes `ACTIVE`.
+- `getActiveCombat(sessionId)`: lectura de solo consulta del combate ACTIVE de la sesión, si existe.
+
+Errores nuevos: `pab.rpg.exception.CombatNotFoundException` → 404 `COMBAT_NOT_FOUND`; `pab.rpg.exception.CombatNotAllowedException` → 422 `COMBAT_NOT_ALLOWED` en `GlobalExceptionHandler`.
+
+Endpoints nuevos en `pab.rpg.api.controller.CombatController` (mismo patrón que `QuestController`: valida la sesión con `GameSerssionService.getSession` antes de delegar):
+
+- `GET /api/v1/sessions/{sessionId}/combat?playerId={playerId}`: combate activo (404 si no hay ninguno).
+- `POST /api/v1/sessions/{sessionId}/combat/start?playerId={playerId}` con body `StartCombatRequest` (`npcIds`).
+- `POST /api/v1/sessions/{sessionId}/combat/{combatId}/attack?playerId={playerId}` con body `PerformAttackRequest` (`attackerParticipantId`, `targetParticipantId`).
+
+Sin integración todavía con `ActionServiceImpl`/interpretación de texto: el combate se inicia y se juega con IDs explícitos de NPCs y participantes, igual que `actionType`/`targetNpcId`/`choiceKey` hoy, pendiente del punto 8 (interpretación real). Tampoco existen todavía "moverse", "defenderse", "usar objeto" ni huida explícita del GDD sección 11 (solo atacar), ni sistema de armas/objetos (el daño es una tabla fija provisional).
+
+Test añadido: `CombatServiceImplTest` con Mockito (combate ya activo, NPC fuera de la localización, creación de participantes ordenados por iniciativa, ataque que reduce salud y termina el combate al derrotar al bando enemigo, ataque fuera de turno). También se actualizaron `NpcTargetRuleTest` y `NpcServiceImplTest` al nuevo constructor de `Npc` (con `attributes`/`healthMaximum`).
+
 ## Orden recomendado de trabajo
 
 1. Implementar eventos e idempotencia. ✅
@@ -300,8 +326,8 @@ Test añadido: `QuestServiceImplTest` con Mockito (misión desconocida, arranque
 3. Añadir localizaciones (`Location`) y sustituir el atributo/dificultad fijos de `ActionServiceImpl` por un `ActionType` mínimo + `GameRule`s reales que usen la localización actual. ✅
 4. Añadir NPCs, relaciones y memoria básica (requiere localizaciones del punto 3). ✅ (relaciones se leen y se escriben desde acciones `SOCIAL`; `NpcKnowledgeFact` sigue sin llamador real, pendiente de diálogo/investigación/misiones)
 5. Añadir misiones. ✅ (máquina de estados con ramas, sin integrar todavía con `ActionServiceImpl`/interpretación de texto)
-6. Implementar combate. **(siguiente paso)**
-7. Añadir el adaptador OpenAI con stub para pruebas.
+6. Implementar combate. ✅ (iniciativa, turnos con 2 acciones, ataque y daño por tabla fija, sin armas/objetos ni integración con `ActionServiceImpl`/interpretación de texto)
+7. Añadir el adaptador OpenAI con stub para pruebas. **(siguiente paso)**
 8. Integrar interpretación de texto y narración.
 
 Motivo del cambio de orden: `GameSession.currentLocationId` ya existe pero no apunta a ninguna entidad real, y `ActionServiceImpl` resuelve toda acción con un único camino fijo (Intelecto/MODERATE) sin usar reglas ni contexto. Introducir localizaciones y un motor mínimo de reglas por tipo de acción antes de los NPCs evita añadirlos "flotando" sin ubicación y acerca el motor al modelo de `ARCHITECTURE_CONTRACT.md` (entidades + reglas, no un único camino hardcodeado).
@@ -317,8 +343,8 @@ Motivo del cambio de orden: `GameSession.currentLocationId` ya existe pero no ap
 
 ## Estado de la sesión
 
-El trabajo queda pausado aquí, después de añadir `Quest`/`QuestStage`/`QuestStageTransition`/`QuestState`/`QuestStatus` (migración V5 con seed de 3 misiones ramificadas), sus repositorios, `QuestService`/`QuestServiceImpl` (`startQuest` idempotente, `advanceQuest` validando transiciones, lectura de estado) y los endpoints `GET/POST /api/v1/sessions/{sessionId}/quests...`. Las misiones se avanzan con un `choiceKey` explícito por ahora, sin integración con `ActionServiceImpl`. Pendiente de verificación manual (compilación y tests) por el usuario.
+El punto 6 (combate básico: `Combat`/`CombatParticipant`/`CombatStatus`/`CombatTeam`/`CombatParticipantStatus`, migración V6, `CombatService`/`CombatServiceImpl`, endpoints `GET/POST /api/v1/sessions/{sessionId}/combat...`) está terminado y verificado: el proyecto compila y todos los tests pasan, incluyendo `CombatServiceImplTest`. El combate se juega con IDs explícitos de NPCs y participantes, sin integración con `ActionServiceImpl`.
 
 ## Próximo paso cuando se retome
 
-Punto 6 del orden de trabajo: implementar combate básico (`Combat`/`CombatParticipant`, iniciativa, acciones por turno, daño), apoyándose en `Character`/`HealthState` y los NPCs ya existentes como posibles combatientes. Después: adaptador OpenAI (punto 7) e integración final (punto 8).
+Punto 7 del orden de trabajo: añadir el adaptador OpenAI con stub para pruebas (interfaz propia que aísle el dominio del proveedor, sin llamadas reales todavía). Después: integración final de interpretación de texto y narración (punto 8), que es también cuando tendría sentido conectar `actionType`/`targetNpcId`/`choiceKey`/combate a la interpretación real en vez de a IDs explícitos.

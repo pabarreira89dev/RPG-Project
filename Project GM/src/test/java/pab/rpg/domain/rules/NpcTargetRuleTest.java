@@ -51,7 +51,8 @@ class NpcTargetRuleTest {
     void allowsActionWhenTargetedNpcIsAtCurrentLocation() {
         UUID locationId = UUID.randomUUID();
         UUID npcId = UUID.randomUUID();
-        Npc npc = new Npc(npcId, "aron_tavernkeeper", "Aron", locationId, null, "Tabernero", NpcStatus.ALIVE);
+        Npc npc = new Npc(npcId, "aron_tavernkeeper", "Aron", locationId, null, "Tabernero", NpcStatus.ALIVE,
+                new AttributeSet(10, 10, 10, 10, 10, 10), 20);
         when(npcRepository.findById(npcId)).thenReturn(Optional.of(npc));
 
         ActionContext context = new ActionContext(sessionAtLocation(locationId), ActionType.SOCIAL, npcId);
@@ -72,7 +73,8 @@ class NpcTargetRuleTest {
     @Test
     void rejectsActionWhenTargetedNpcIsAtAnotherLocation() {
         UUID npcId = UUID.randomUUID();
-        Npc npc = new Npc(npcId, "aron_tavernkeeper", "Aron", UUID.randomUUID(), null, "Tabernero", NpcStatus.ALIVE);
+        Npc npc = new Npc(npcId, "aron_tavernkeeper", "Aron", UUID.randomUUID(), null, "Tabernero", NpcStatus.ALIVE,
+                new AttributeSet(10, 10, 10, 10, 10, 10), 20);
         when(npcRepository.findById(npcId)).thenReturn(Optional.of(npc));
 
         ActionContext context = new ActionContext(sessionAtLocation(UUID.randomUUID()), ActionType.SOCIAL, npcId);

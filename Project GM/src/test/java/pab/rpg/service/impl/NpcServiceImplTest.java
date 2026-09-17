@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import pab.rpg.domain.entity.AttributeSet;
 import pab.rpg.domain.entity.Npc;
 import pab.rpg.domain.entity.NpcKnowledgeFact;
 import pab.rpg.domain.entity.NpcStatus;
@@ -44,7 +45,8 @@ class NpcServiceImplTest {
     void getNpcsAtLocationReturnsRepositoryResult() {
         service = new NpcServiceImpl(npcRepository, relationshipRepository, npcKnowledgeFactRepository);
         UUID locationId = UUID.randomUUID();
-        Npc npc = new Npc(UUID.randomUUID(), "aron_tavernkeeper", "Aron", locationId, null, "Tabernero", NpcStatus.ALIVE);
+        Npc npc = new Npc(UUID.randomUUID(), "aron_tavernkeeper", "Aron", locationId, null, "Tabernero", NpcStatus.ALIVE,
+                new AttributeSet(10, 10, 10, 10, 10, 10), 20);
         when(npcRepository.findAllByLocationId(locationId)).thenReturn(List.of(npc));
 
         List<Npc> result = service.getNpcsAtLocation(locationId);

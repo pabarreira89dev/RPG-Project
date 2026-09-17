@@ -48,6 +48,18 @@ public class GlobalExceptionHandler {
         return new ApiError("QUEST_TRANSITION_NOT_ALLOWED", exception.getMessage(), Instant.now());
     }
 
+    @ExceptionHandler(CombatNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiError handleCombatNotFound(CombatNotFoundException exception) {
+        return new ApiError("COMBAT_NOT_FOUND", exception.getMessage(), Instant.now());
+    }
+
+    @ExceptionHandler(CombatNotAllowedException.class)
+    @ResponseStatus(HttpStatus.UNPROCESSABLE_CONTENT)
+    public ApiError handleCombatNotAllowed(CombatNotAllowedException exception) {
+        return new ApiError("COMBAT_NOT_ALLOWED", exception.getMessage(), Instant.now());
+    }
+
     @ExceptionHandler({IllegalArgumentException.class, NullPointerException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiError handleInvalidRequest(RuntimeException exception) {
