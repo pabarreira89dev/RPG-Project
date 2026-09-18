@@ -15,7 +15,8 @@ public record CombatResponse(
         CombatStatus status,
         int roundNumber,
         UUID currentParticipantId,
-        List<ParticipantResponse> participants
+        List<ParticipantResponse> participants,
+        String narration
 ) {
 
     public static CombatResponse from(CombatService.CombatView view) {
@@ -25,6 +26,7 @@ public record CombatResponse(
                 .roundNumber(view.roundNumber())
                 .currentParticipantId(view.currentParticipantId())
                 .participants(view.participants().stream().map(ParticipantResponse::from).toList())
+                .narration(view.narration())
                 .build();
     }
 

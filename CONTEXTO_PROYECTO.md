@@ -88,8 +88,8 @@ DATABASE_PASSWORD
 En `Project GM/src/main/resources` existen:
 
 - `application.yml`: configuración común y perfil por defecto `local`.
-- `application-local.yml`: PostgreSQL local/externo, logs detallados, OpenAI desactivado y usuario de desarrollo.
-- `application-test.yml`: base de datos de pruebas, OpenAI desactivado.
+- `application-local.yml`: PostgreSQL local/externo, logs detallados, OpenAI real activado por defecto (requiere `OPENAI_API_KEY`/`OPENAI_MODEL` como variables de entorno; se puede desactivar con `OPENAI_ENABLED=false` para volver al stub) y usuario de desarrollo.
+- `application-test.yml`: base de datos de pruebas, OpenAI desactivado (stub, para que los tests sean deterministas y no dependan de red/credenciales).
 - `application-cloud.yml`: PostgreSQL y OpenAI configurados mediante variables de entorno, seguridad de desarrollo desactivada.
 
 El perfil anterior `prod` fue sustituido por `cloud`.
@@ -289,7 +289,7 @@ Endpoints nuevos en `pab.rpg.api.controller.QuestController` (mismo patrón que 
 - `POST /api/v1/sessions/{sessionId}/quests/{questCode}/start?playerId={playerId}`.
 - `POST /api/v1/sessions/{sessionId}/quests/{questCode}/advance?playerId={playerId}` con body `AdvanceQuestRequest` (`choiceKey`).
 
-Todavía no hay ninguna integración entre `ActionServiceImpl`/interpretación de texto y las misiones: `advanceQuest` se invoca explícitamente con un `choiceKey` conocido de antemano (provisional, igual que `actionType`/`targetNpcId` hoy), pendiente de que la interpretación real (punto 8) traduzca texto libre a una elección de misión válida.
+Todavía no hay ninguna integración entre `ActionServiceImpl`/interpretación de texto y las misiones: `advanceQuest` se invoca explícitamente con un `choiceKey` conocido de antemano (provisional, igual que `actionType`/`targetNpcId` hoy), pendiente de que la interpretación real (punto 9) traduzca texto libre a una elección de misión válida.
 
 Test añadido: `QuestServiceImplTest` con Mockito (misión desconocida, arranque idempotente, transición inválida, misión ya completada, transición válida que completa la misión, listado de misiones visibles).
 
@@ -315,9 +315,62 @@ Endpoints nuevos en `pab.rpg.api.controller.CombatController` (mismo patrón que
 - `POST /api/v1/sessions/{sessionId}/combat/start?playerId={playerId}` con body `StartCombatRequest` (`npcIds`).
 - `POST /api/v1/sessions/{sessionId}/combat/{combatId}/attack?playerId={playerId}` con body `PerformAttackRequest` (`attackerParticipantId`, `targetParticipantId`).
 
-Sin integración todavía con `ActionServiceImpl`/interpretación de texto: el combate se inicia y se juega con IDs explícitos de NPCs y participantes, igual que `actionType`/`targetNpcId`/`choiceKey` hoy, pendiente del punto 8 (interpretación real). Tampoco existen todavía "moverse", "defenderse", "usar objeto" ni huida explícita del GDD sección 11 (solo atacar), ni sistema de armas/objetos (el daño es una tabla fija provisional).
+Sin integración todavía con `ActionServiceImpl`/interpretación de texto: el combate se inicia y se juega con IDs explícitos de NPCs y participantes, igual que `actionType`/`targetNpcId`/`choiceKey` hoy, pendiente del punto 9 (interpretación real). Tampoco existen todavía "moverse", "defenderse", "usar objeto" ni huida explícita del GDD sección 11 (solo atacar), ni sistema de armas/objetos (el daño es una tabla fija provisional).
 
 Test añadido: `CombatServiceImplTest` con Mockito (combate ya activo, NPC fuera de la localización, creación de participantes ordenados por iniciativa, ataque que reduce salud y termina el combate al derrotar al bando enemigo, ataque fuera de turno). También se actualizaron `NpcTargetRuleTest` y `NpcServiceImplTest` al nuevo constructor de `Npc` (con `attributes`/`healthMaximum`).
+
+### Punto 8 implementado: narración conectada a MasterAdapter
+
+`ActionServiceImpl` ya no usa un `narrationFor()` fijo por `ResultGrade`: inyecta `MasterAdapter` y `LocationRepository`, y llama a `masterAdapter.narrate(new NarrationRequest(sceneSummary, command.text(), resolution.grade(), eventsSummary))`, donde `sceneSummary` es `nombre — descripción` de la localización actual de la sesión y `eventsSummary` es la lista de eventos generados (`String.join(", ", events)`).
+
+`CombatServiceImpl` hace lo mismo solo en `performAttack` (única operación con una tirada/`ResultGrade` que narrar): construye `actionText` como "`<atacante> ataca a <objetivo>`" y `eventsSummary` con el daño y el estado del objetivo. `startCombat`/`getActiveCombat` no generan narración (no hay tirada que narrar y evitar llamar a OpenAI en cada consulta de solo lectura). Para soportar esto, `CombatService.CombatView` y `CombatResponse` ganan un campo `narration` (nullable).
+
+Con `openai.enabled=false` (perfil `test`, o `local` si se pone `OPENAI_ENABLED=false`) el resultado es idéntico a antes (el `StubMasterAdapter` devuelve las mismas frases fijas). Con `openai.enabled=true` (perfiles `local` y `cloud`) la narración la genera el modelo real.
+
+Sigue sin interpretación de texto libre: `actionType`/`targetNpcId` en acciones, `choiceKey` en misiones y los IDs de combate se siguen pasando explícitos desde el cliente; eso queda para el punto 9.
+
+### Punto 9 implementado: interpretación de texto libre (acciones)
+
+Alcance decidido con el usuario: solo acciones (`actionType`/`targetNpcId`), dejando combate (`request_combat`) y misiones (`choiceKey`) con sus IDs explícitos por ahora — son integraciones más grandes que tocan `CombatService`/`QuestService` y quedan para más adelante. Contrato del endpoint elegido: compatible, no el exacto del TDD — `actionType`/`targetNpcId` en `SubmitActionRequest`/`SubmitActionCommand` pasan a ser **opcionales**; si el cliente los envía, se usan tal cual (así siguen funcionando los tests/clientes existentes); si se omiten, `ActionServiceImpl` los deriva del texto libre vía `MasterAdapter.interpret(...)`.
+
+`MasterAdapter` gana `ActionIntent interpret(InterpretationRequest request)`, con `InterpretationRequest(sceneSummary, playerText, List<VisibleNpc> visibleNpcs)` (`VisibleNpc(id, name)`) y `ActionIntent(ActionType actionType, UUID targetNpcId)`. `ActionServiceImpl` construye `visibleNpcs` a partir de `npcService.getNpcsAtLocation(locationId)` (los NPCs de la localización actual) para que la IA/heurística solo pueda referenciar NPCs reales y visibles.
+
+- `StubMasterAdapter.interpret()`: heurística de palabras clave simple y determinista (sin red) — "atac/golpe/pelea/lanz/empuj" → PHYSICAL, "habl/convenc/pregunt/negoci/salud" → SOCIAL, "busc/investig/examin/inspeccion" → INVESTIGATION, si no EXPLORATION; `targetNpcId` es el primer NPC visible cuyo nombre aparece en el texto (o `null`).
+- `OpenAiMasterAdapter.interpret()`: usa **Structured Outputs** de la Responses API (`text.format = {type: "json_schema", name: "action_intent", strict: true, schema: {...}}` con `actionType` enum de los 4 valores y `targetNpcId` string-o-null) para forzar una respuesta JSON válida; el texto de `output[].content[].text` (mismo mecanismo de extracción que narrate()) es en este caso el JSON serializado, que se parsea con Jackson (`ObjectMapper` inyectado, el mismo bean de `JacksonConfig`) a un record interno `RawActionIntent(actionType, targetNpcId)`.
+
+Manejo de referencias alucinadas (`ARCHITECTURE_CONTRACT.md` sección 25, "nunca crear automáticamente la entidad"): si `targetNpcId` no es un UUID válido, el adaptador lo descarta (`null`) sin lanzar error; si es un UUID válido pero de un NPC que no existe o no está en la localización actual, **no se valida en el adaptador** — se reutiliza `NpcTargetRule` (ya existente, ejecutado como parte de `gameRules.forEach(rule -> rule.check(context))`), que ya rechaza esa situación con `ActionNotAllowedException` → 422. Así se evita duplicar la validación en dos sitios. Un JSON inválido, un `actionType` desconocido o un fallo de red al interpretar lanzan `AiUnavailableException` → 503 `OPENAI_UNAVAILABLE`, sin mutar estado (igual que en `narrate()`).
+
+Test añadido: `StubMasterAdapterTest` (heurística de `actionType`/`targetNpcId` por texto) y `OpenAiMasterAdapterTest` (parseo de la respuesta JSON Schema simulada, incluida una prueba de que un `targetNpcId` no-UUID como `"chair-999"` se descarta en vez de fallar); `ActionServiceImplTest` (nuevo caso con `actionType=null` que verifica la llamada a `masterAdapter.interpret(...)`).
+
+### Punto 10 implementado: interpretación de texto libre (combate y misiones)
+
+`MasterAdapter` gana un método genérico reutilizable por ambos casos: `String selectCandidate(CandidateSelectionRequest request)`, con `CandidateSelectionRequest(playerText, List<Candidate> candidates)` y `Candidate(id, label)` — "elige uno de estos" en vez de una clasificación fija como `interpret()`. Devuelve el `id` del candidato elegido o `null`; nunca inventa un id fuera de la lista.
+
+- `StubMasterAdapter.selectCandidate()`: primer candidato cuyo `label` aparece en el texto (o `null`).
+- `OpenAiMasterAdapter.selectCandidate()`: igual que `interpret()`, Structured Outputs con `text.format=json_schema`, pero aquí el `enum` del campo `candidateId` se **construye dinámicamente en cada llamada** a partir de `request.candidates()` (más los `null`) — más fuerte que el enum estático de `interpret()`, porque el modelo solo puede elegir un id real de *esa* llamada concreta.
+
+**Combate**: `CombatService` gana `CombatView performAttack(UUID sessionId, UUID combatId, String playerText)` (sobrecarga junto a la versión con IDs explícitos, que se mantiene). El atacante se deriva automáticamente (el participante cuyo `turnOrder` coincide con `combat.getCurrentTurnOrder()`; si no es del equipo `PLAYER`, `CombatNotAllowedException` — "no es el turno del jugador"), así que el texto libre solo necesita identificar el objetivo. Los candidatos son los participantes `ENEMY` `ACTIVE` (id=`participantId`, label=nombre). El id elegido se parsea como UUID (si no lo es, o si `selectCandidate` devuelve `null`, `CombatNotAllowedException`: "No se identifica un objetivo claro para atacar") y se delega en el `performAttack(sessionId, combatId, attackerParticipantId, targetParticipantId)` ya existente, que revalida todo igual que antes (turno, equipo, estado). `PerformAttackRequest` gana un campo `text`; si `targetParticipantId` es `null` en el body, `CombatController` usa la ruta de texto.
+
+**Misiones**: `QuestService` gana `QuestStateView advanceQuestFromText(UUID sessionId, String questCode, String playerText)`. Los candidatos son las `QuestStageTransition` disponibles desde el `currentStageId` (nueva query `QuestStageTransitionRepository.findAllByQuestIdAndFromStageId`), con `id=label=choiceKey` (no hay una descripción humana separada del `choiceKey` en el modelo actual). El `choiceKey` elegido se delega en `advanceQuest(sessionId, questCode, choiceKey)` ya existente (revalida la transición). Si `selectCandidate` devuelve `null`, `QuestTransitionNotAllowedException`: "No se identifica una decisión clara para esta etapa". `AdvanceQuestRequest` gana un campo `text`; si `choiceKey` es `null` en el body, `QuestController` usa la ruta de texto. `QuestServiceImpl` pasa a inyectar `MasterAdapter`.
+
+Mismo patrón de manejo de alucinaciones que en el punto 9: el adaptador solo descarta ids con formato inválido; un id con formato válido pero que no corresponde a una entidad real de *ese* combate/*esa* misión sigue rechazado por la validación ya existente (`findParticipant`, `findByQuestIdAndFromStageIdAndChoiceKey`), sin duplicar lógica.
+
+Test añadido: `CombatServiceImplTest` (resuelve el objetivo vía `masterAdapter.selectCandidate`; lanza `CombatNotAllowedException` si no hay coincidencia), `QuestServiceImplTest` (resuelve `choiceKey` vía `masterAdapter.selectCandidate`; lanza `QuestTransitionNotAllowedException` si no hay coincidencia), `StubMasterAdapterTest`/`OpenAiMasterAdapterTest` (nuevos casos para `selectCandidate`, incluida la respuesta `candidateId: null`).
+
+### Punto 7 implementado: adaptador OpenAI con stub
+
+Nueva interfaz `pab.rpg.service.MasterAdapter` (puerto del dominio hacia el proveedor de IA, con el método `narrate(NarrationRequest)`; `NarrationRequest` lleva escena, texto de la acción, `ResultGrade` ya resuelto y resumen de eventos) que aisla al dominio de OpenAI, igual que exige `ARCHITECTURE_CONTRACT.md`: la IA solo narra un resultado que el motor ya decidió, nunca lo decide ella.
+
+Dos implementaciones en `service.impl`, seleccionadas por la propiedad `openai.enabled` (ya existía en `application-local.yml`/`application-test.yml`/`application-cloud.yml`):
+
+- `StubMasterAdapter` (`@ConditionalOnProperty(openai.enabled=false, matchIfMissing=true)`, activo en el perfil `test` y en `local` solo si se fija `OPENAI_ENABLED=false`): devuelve las mismas frases fijas en español que ya usaba `ActionServiceImpl` por `ResultGrade`, sin llamadas de red.
+- `OpenAiMasterAdapter` (`@ConditionalOnProperty(openai.enabled=true)`, activo por defecto en `local` y en `cloud`): único componente que conoce el protocolo HTTP de OpenAI (Responses API) mediante `RestClient`; construye la petición con `instructions` (system prompt fijo en español que prohibe inventar hechos/daño) e `input` (escena/acción/resultado/eventos), y extrae la narración de `output[].content[].text` (la API HTTP cruda no expone el campo de conveniencia `output_text` de los SDKs oficiales). Cualquier fallo de red o respuesta sin narración lanza `AiUnavailableException`.
+
+Nueva clase `pab.rpg.config.OpenAiProperties` (`@ConfigurationProperties(prefix="openai")`, registrada vía `@ConfigurationPropertiesScan` en `Application`) con `enabled`/`apiKey`/`baseUrl`/`model`/`maxOutputTokens`/`temperature`. Error nuevo `pab.rpg.exception.AiUnavailableException` → 503 `OPENAI_UNAVAILABLE` en `GlobalExceptionHandler` (código ya prevista en TDD MVP v0.2 sección 9.5).
+
+Todavía sin integrar en `ActionServiceImpl`/`CombatServiceImpl`: la narración de acciones y combate sigue generada por los métodos fijos existentes (`narrationFor` en `ActionServiceImpl`); conectar `MasterAdapter` a esos flujos es el punto 8 (ver más abajo), y la interpretación real de texto libre es el punto 9.
+
+Test añadido: `StubMasterAdapterTest` (una frase por `ResultGrade`) y `OpenAiMasterAdapterTest` con `MockRestServiceServer` enlazado a `RestClient.Builder` (extrae narración de una respuesta simulada de la Responses API; verifica que un error 5xx lanza `AiUnavailableException`), sin necesidad de WireMock ni credenciales reales.
 
 ## Orden recomendado de trabajo
 
@@ -327,8 +380,10 @@ Test añadido: `CombatServiceImplTest` con Mockito (combate ya activo, NPC fuera
 4. Añadir NPCs, relaciones y memoria básica (requiere localizaciones del punto 3). ✅ (relaciones se leen y se escriben desde acciones `SOCIAL`; `NpcKnowledgeFact` sigue sin llamador real, pendiente de diálogo/investigación/misiones)
 5. Añadir misiones. ✅ (máquina de estados con ramas, sin integrar todavía con `ActionServiceImpl`/interpretación de texto)
 6. Implementar combate. ✅ (iniciativa, turnos con 2 acciones, ataque y daño por tabla fija, sin armas/objetos ni integración con `ActionServiceImpl`/interpretación de texto)
-7. Añadir el adaptador OpenAI con stub para pruebas. **(siguiente paso)**
-8. Integrar interpretación de texto y narración.
+7. Añadir el adaptador OpenAI con stub para pruebas. ✅ (`MasterAdapter` + `StubMasterAdapter`/`OpenAiMasterAdapter` según `openai.enabled`)
+8. Conectar `MasterAdapter` a `ActionServiceImpl`/`CombatServiceImpl` para narración real. ✅ (ver detalle abajo; sigue sin interpretación de texto libre)
+9. Integrar interpretación de texto libre. ✅ (solo acciones: `actionType`/`targetNpcId`; combate y misiones siguen con IDs explícitos — ver detalle abajo)
+10. Interpretación de texto libre para combate (ataque) y misiones (`choiceKey`). ✅ (ver detalle abajo)
 
 Motivo del cambio de orden: `GameSession.currentLocationId` ya existe pero no apunta a ninguna entidad real, y `ActionServiceImpl` resuelve toda acción con un único camino fijo (Intelecto/MODERATE) sin usar reglas ni contexto. Introducir localizaciones y un motor mínimo de reglas por tipo de acción antes de los NPCs evita añadirlos "flotando" sin ubicación y acerca el motor al modelo de `ARCHITECTURE_CONTRACT.md` (entidades + reglas, no un único camino hardcodeado).
 
@@ -343,8 +398,8 @@ Motivo del cambio de orden: `GameSession.currentLocationId` ya existe pero no ap
 
 ## Estado de la sesión
 
-El punto 6 (combate básico: `Combat`/`CombatParticipant`/`CombatStatus`/`CombatTeam`/`CombatParticipantStatus`, migración V6, `CombatService`/`CombatServiceImpl`, endpoints `GET/POST /api/v1/sessions/{sessionId}/combat...`) está terminado y verificado: el proyecto compila y todos los tests pasan, incluyendo `CombatServiceImplTest`. El combate se juega con IDs explícitos de NPCs y participantes, sin integración con `ActionServiceImpl`.
+Los puntos 6 a 10 (combate, adaptador OpenAI con stub, narración conectada, e interpretación de texto libre para acciones/combate/misiones) están terminados y verificados: el proyecto compila y los 86 tests pasan. Los tres endpoints de intención del jugador (`POST .../actions`, `POST .../combat/{combatId}/attack`, `POST .../quests/{questCode}/advance`) aceptan ahora tanto IDs/claves explícitos (compatibilidad) como texto libre interpretado vía `MasterAdapter` (`interpret()` para acciones, `selectCandidate()` reutilizado para combate y misiones).
 
 ## Próximo paso cuando se retome
 
-Punto 7 del orden de trabajo: añadir el adaptador OpenAI con stub para pruebas (interfaz propia que aísle el dominio del proveedor, sin llamadas reales todavía). Después: integración final de interpretación de texto y narración (punto 8), que es también cuando tendría sentido conectar `actionType`/`targetNpcId`/`choiceKey`/combate a la interpretación real en vez de a IDs explícitos.
+No queda ningún punto pendiente del "Orden recomendado de trabajo" original (1–10). El vertical slice MVP v0.2 tiene interpretación de texto libre en sus tres flujos principales. Los pasos siguientes del TDD MVP v0.2 (no abordados todavía): 12) seguridad JWT, 13) observabilidad (correlationId, métricas de duración/errores/tokens, logs estructurados), 14) pruebas end-to-end del vertical slice completo. También quedan mejoras de alcance dentro del combate (moverse/defenderse/usar objeto, sistema de armas/objetos — GDD sección 11) y de misiones/NPCs (diálogo real que use `NpcKnowledgeFact`, todavía sin llamador).

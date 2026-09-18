@@ -15,6 +15,7 @@ import pab.rpg.domain.repository.QuestStageTransitionRepository;
 import pab.rpg.domain.repository.QuestStateRepository;
 import pab.rpg.exception.QuestNotFoundException;
 import pab.rpg.exception.QuestTransitionNotAllowedException;
+import pab.rpg.service.MasterAdapter;
 import pab.rpg.service.QuestService.QuestStateView;
 
 import java.time.Instant;
@@ -41,9 +42,11 @@ class QuestServiceImplTest {
     private QuestStageTransitionRepository questStageTransitionRepository;
     @Mock
     private QuestStateRepository questStateRepository;
+    @Mock
+    private MasterAdapter masterAdapter;
 
     private QuestServiceImpl service() {
-        return new QuestServiceImpl(questRepository, questStageRepository, questStageTransitionRepository, questStateRepository);
+        return new QuestServiceImpl(questRepository, questStageRepository, questStageTransitionRepository, questStateRepository, masterAdapter);
     }
 
     private Quest quest(UUID id) {
@@ -178,5 +181,45 @@ class QuestServiceImplTest {
 
         assertEquals(1, views.size());
         assertEquals("aron_debt", views.get(0).questCode());
+    }
+
+    @Test
+    void advanceQuestFromTextResolvesChoiceKeyViaMasterAdapter() {
+        UUID sessionId = UUID.randomUUID();
+        UUID questId = UUID.randomUUID();
+        UUID fromStageId = UUID.randomUUID();
+        UUID toStageId = UUID.randomUUID();
+        QuestState state = new QuestState(UUID.randomUUID(), sessionId, questId, fromStageId, QuestStatus.ACTIVE, Instant.now(), Instant.now());
+        QuestStageTransition transition = new QuestStageTransition(UUID.randomUUID(), questId, fromStageId, toStageId, "pay");
+        QuestStage nextStage = stage(toStageId, questId, "debt_paid", false, true);
+
+        when(questRepository.findByCode("aron_debt")).thenReturn(Optional.of(quest(questId)));
+        when(questStateRepository.findBySessionIdAndQuestId(sessionId, questId)).thenReturn(Optional.of(state));
+        when(questStageTransitionRepository.findAllByQuestIdAndFromStageId(questId, fromStageId)).thenReturn(List.of(transition));
+        when(masterAdapter.selectCandidate(any())).thenReturn("pay");
+        when(questStageTransitionRepository.findByQuestIdAndFromStageIdAndChoiceKey(questId, fromStageId, "pay"))
+                .thenReturn(Optional.of(transition));
+        when(questStageRepository.findById(toStageId)).thenReturn(Optional.of(nextStage));
+
+        QuestStateView view = service().advanceQuestFromText(sessionId, "aron_debt", "Le pago su deuda.");
+
+        assertEquals("debt_paid", view.stageCode());
+    }
+
+    @Test
+    void advanceQuestFromTextThrowsWhenNoChoiceMatches() {
+        UUID sessionId = UUID.randomUUID();
+        UUID questId = UUID.randomUUID();
+        UUID fromStageId = UUID.randomUUID();
+        QuestState state = new QuestState(UUID.randomUUID(), sessionId, questId, fromStageId, QuestStatus.ACTIVE, Instant.now(), Instant.now());
+        QuestStageTransition transition = new QuestStageTransition(UUID.randomUUID(), questId, fromStageId, UUID.randomUUID(), "pay");
+
+        when(questRepository.findByCode("aron_debt")).thenReturn(Optional.of(quest(questId)));
+        when(questStateRepository.findBySessionIdAndQuestId(sessionId, questId)).thenReturn(Optional.of(state));
+        when(questStageTransitionRepository.findAllByQuestIdAndFromStageId(questId, fromStageId)).thenReturn(List.of(transition));
+        when(masterAdapter.selectCandidate(any())).thenReturn(null);
+
+        assertThrows(QuestTransitionNotAllowedException.class,
+                () -> service().advanceQuestFromText(sessionId, "aron_debt", "No sé qué hacer."));
     }
 }

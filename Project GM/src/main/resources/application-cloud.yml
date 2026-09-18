@@ -11,6 +11,11 @@ spring:
   jpa:
     show-sql: false
 
+  http:
+    client:
+      connect-timeout: ${OPENAI_CONNECT_TIMEOUT:5s}
+      read-timeout: ${OPENAI_READ_TIMEOUT:20s}
+
 openai:
   enabled: ${OPENAI_ENABLED:true}
   api-key: ${OPENAI_API_KEY}

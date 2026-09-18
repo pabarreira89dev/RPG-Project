@@ -8,7 +8,9 @@ import pab.rpg.api.dto.SubmitActionCommand;
 import pab.rpg.api.dto.response.ActionResponse;
 import pab.rpg.domain.entity.AttributeSet;
 import pab.rpg.domain.entity.GameSession;
+import pab.rpg.domain.entity.Location;
 import pab.rpg.domain.repository.GameSessionRepository;
+import pab.rpg.domain.repository.LocationRepository;
 import pab.rpg.domain.rules.ActionContext;
 import pab.rpg.domain.rules.ActionType;
 import pab.rpg.domain.rules.Attribute;
@@ -21,6 +23,11 @@ import pab.rpg.service.ActionService;
 import pab.rpg.service.GameEventService;
 import pab.rpg.service.GameSerssionService;
 import pab.rpg.service.IdempotencyService;
+import pab.rpg.service.MasterAdapter;
+import pab.rpg.service.MasterAdapter.ActionIntent;
+import pab.rpg.service.MasterAdapter.InterpretationRequest;
+import pab.rpg.service.MasterAdapter.NarrationRequest;
+import pab.rpg.service.MasterAdapter.VisibleNpc;
 import pab.rpg.service.NpcService;
 
 import java.time.Duration;
@@ -48,6 +55,8 @@ public class ActionServiceImpl implements ActionService {
     private final List<GameRule> gameRules;
     private final NpcService npcService;
     private final ObjectMapper objectMapper;
+    private final LocationRepository locationRepository;
+    private final MasterAdapter masterAdapter;
 
     @Override
     public ActionResponse submitAction(SubmitActionCommand command) {
@@ -65,14 +74,28 @@ public class ActionServiceImpl implements ActionService {
             throw new StaleSessionVersionException(command.sessionId(), command.expectedVersion(), session.getVersion());
         }
 
-        ActionContext context = new ActionContext(session, command.actionType(), command.targetNpcId());
+        ActionType actionType = command.actionType();
+        UUID targetNpcId = command.targetNpcId();
+        if (actionType == null) {
+            ActionIntent intent = masterAdapter.interpret(new InterpretationRequest(
+                    sceneSummary(session.getCurrentLocationId()),
+                    command.text(),
+                    visibleNpcs(session.getCurrentLocationId())
+            ));
+            actionType = intent.actionType();
+            if (targetNpcId == null) {
+                targetNpcId = intent.targetNpcId();
+            }
+        }
+
+        ActionContext context = new ActionContext(session, actionType, targetNpcId);
         gameRules.forEach(rule -> rule.check(context));
 
         CheckResolution resolution = checkResolver.resolve(
-                attributeScore(session.getCharacter().getAttributes(), command.actionType().getAttribute()),
+                attributeScore(session.getCharacter().getAttributes(), actionType.getAttribute()),
                 0,
                 0,
-                command.actionType().getDifficulty()
+                actionType.getDifficulty()
         );
 
         session.advanceWorldTime(ACTION_DURATION);
@@ -85,19 +108,19 @@ public class ActionServiceImpl implements ActionService {
                 session.getId(),
                 "ACTION_RESOLVED",
                 command.playerId(),
-                eventPayload(actionId, command, resolution, modifier),
+                eventPayload(actionId, command, actionType, resolution, modifier),
                 session.getWorldTime()
         );
 
         List<String> events = new ArrayList<>(List.of("ACTION_RESOLVED"));
-        if (command.actionType() == ActionType.SOCIAL && command.targetNpcId() != null) {
+        if (actionType == ActionType.SOCIAL && targetNpcId != null) {
             int delta = relationshipDeltaFor(resolution.grade());
-            int newValue = npcService.changeRelationship(session.getId(), command.targetNpcId(), delta);
+            int newValue = npcService.changeRelationship(session.getId(), targetNpcId, delta);
             gameEventService.append(
                     session.getId(),
                     "RELATIONSHIP_CHANGED",
                     command.playerId(),
-                    Map.of("npcId", command.targetNpcId(), "delta", delta, "newValue", newValue),
+                    Map.of("npcId", targetNpcId, "delta", delta, "newValue", newValue),
                     session.getWorldTime()
             );
             events.add("RELATIONSHIP_CHANGED");
@@ -106,7 +129,12 @@ public class ActionServiceImpl implements ActionService {
         ActionResponse response = new ActionResponse(
                 actionId,
                 "RESOLVED",
-                narrationFor(resolution),
+                masterAdapter.narrate(new NarrationRequest(
+                        sceneSummary(session.getCurrentLocationId()),
+                        command.text(),
+                        resolution.grade(),
+                        String.join(", ", events)
+                )),
                 new ActionResponse.ResultDetails(
                         resolution.grade().name(),
                         new ActionResponse.RollDetails(resolution.d20(), modifier, resolution.total(), resolution.difficulty().getValue())
@@ -124,7 +152,6 @@ public class ActionServiceImpl implements ActionService {
         Objects.requireNonNull(command, "command must not be null");
         Objects.requireNonNull(command.sessionId(), "sessionId must not be null");
         Objects.requireNonNull(command.playerId(), "playerId must not be null");
-        Objects.requireNonNull(command.actionType(), "actionType must not be null");
         Objects.requireNonNull(command.idempotencyKey(), "idempotencyKey must not be null");
 
         if (command.text() == null || command.text().isBlank()) {
@@ -146,12 +173,12 @@ public class ActionServiceImpl implements ActionService {
         };
     }
 
-    private Map<String, Object> eventPayload(UUID actionId, SubmitActionCommand command, CheckResolution resolution, int modifier) {
+    private Map<String, Object> eventPayload(UUID actionId, SubmitActionCommand command, ActionType actionType, CheckResolution resolution, int modifier) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("actionId", actionId);
         payload.put("text", command.text());
-        payload.put("actionType", command.actionType().name());
-        payload.put("attribute", command.actionType().getAttribute().name());
+        payload.put("actionType", actionType.name());
+        payload.put("attribute", actionType.getAttribute().name());
         payload.put("seed", resolution.seed());
         payload.put("d20", resolution.d20());
         payload.put("modifier", modifier);
@@ -172,13 +199,15 @@ public class ActionServiceImpl implements ActionService {
         };
     }
 
-    private String narrationFor(CheckResolution resolution) {
-        return switch (resolution.grade()) {
-            case GRAN_EXITO -> "Tu intento tiene un éxito rotundo.";
-            case EXITO -> "Tu intento sale bien.";
-            case EXITO_CON_COSTE -> "Lo consigues, pero a cierto coste.";
-            case FRACASO -> "Tu intento no sale como esperabas.";
-            case FRACASO_GRAVE -> "Tu intento fracasa de forma grave.";
-        };
+    private String sceneSummary(UUID locationId) {
+        Location location = locationRepository.findById(locationId)
+                .orElseThrow(() -> new IllegalStateException("Location must already be validated by the caller"));
+        return location.getName() + " — " + location.getDescription();
+    }
+
+    private List<VisibleNpc> visibleNpcs(UUID locationId) {
+        return npcService.getNpcsAtLocation(locationId).stream()
+                .map(npc -> new VisibleNpc(npc.getId(), npc.getName()))
+                .toList();
     }
 }

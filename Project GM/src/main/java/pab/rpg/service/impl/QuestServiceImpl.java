@@ -14,6 +14,7 @@ import pab.rpg.domain.repository.QuestStageTransitionRepository;
 import pab.rpg.domain.repository.QuestStateRepository;
 import pab.rpg.exception.QuestNotFoundException;
 import pab.rpg.exception.QuestTransitionNotAllowedException;
+import pab.rpg.service.MasterAdapter;
 import pab.rpg.service.QuestService;
 
 import java.time.Instant;
@@ -31,6 +32,7 @@ public class QuestServiceImpl implements QuestService {
     private final QuestStageRepository questStageRepository;
     private final QuestStageTransitionRepository questStageTransitionRepository;
     private final QuestStateRepository questStateRepository;
+    private final MasterAdapter masterAdapter;
 
     @Override
     public QuestStateView startQuest(UUID sessionId, String questCode) {
@@ -72,6 +74,31 @@ public class QuestServiceImpl implements QuestService {
         questStateRepository.save(state);
 
         return toView(quest, state);
+    }
+
+    @Override
+    public QuestStateView advanceQuestFromText(UUID sessionId, String questCode, String playerText) {
+        Quest quest = requireQuest(questCode);
+        QuestState state = questStateRepository.findBySessionIdAndQuestId(sessionId, quest.getId())
+                .orElseThrow(() -> new QuestTransitionNotAllowedException("La misión no ha empezado todavía."));
+
+        if (state.getStatus() != QuestStatus.ACTIVE) {
+            throw new QuestTransitionNotAllowedException("La misión ya ha finalizado.");
+        }
+
+        List<QuestStageTransition> transitions =
+                questStageTransitionRepository.findAllByQuestIdAndFromStageId(quest.getId(), state.getCurrentStageId());
+
+        List<MasterAdapter.Candidate> candidates = transitions.stream()
+                .map(transition -> new MasterAdapter.Candidate(transition.getChoiceKey(), transition.getChoiceKey()))
+                .toList();
+
+        String choiceKey = masterAdapter.selectCandidate(new MasterAdapter.CandidateSelectionRequest(playerText, candidates));
+        if (choiceKey == null) {
+            throw new QuestTransitionNotAllowedException("No se identifica una decisión clara para esta etapa.");
+        }
+
+        return advanceQuest(sessionId, questCode, choiceKey);
     }
 
     @Override

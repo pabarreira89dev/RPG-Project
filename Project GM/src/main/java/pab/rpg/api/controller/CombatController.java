@@ -57,8 +57,10 @@ public class CombatController {
     ) {
         gameSessionService.getSession(sessionId, playerId);
 
-        return CombatResponse.from(
-                combatService.performAttack(sessionId, combatId, request.attackerParticipantId(), request.targetParticipantId())
-        );
+        CombatService.CombatView view = request.targetParticipantId() != null
+                ? combatService.performAttack(sessionId, combatId, request.attackerParticipantId(), request.targetParticipantId())
+                : combatService.performAttack(sessionId, combatId, request.text());
+
+        return CombatResponse.from(view);
     }
 }

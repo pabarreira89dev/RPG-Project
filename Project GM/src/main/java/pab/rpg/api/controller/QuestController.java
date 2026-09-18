@@ -56,6 +56,10 @@ public class QuestController {
     ) {
         gameSessionService.getSession(sessionId, playerId);
 
-        return QuestStateResponse.from(questService.advanceQuest(sessionId, questCode, request.choiceKey()));
+        QuestService.QuestStateView view = request.choiceKey() != null
+                ? questService.advanceQuest(sessionId, questCode, request.choiceKey())
+                : questService.advanceQuestFromText(sessionId, questCode, request.text());
+
+        return QuestStateResponse.from(view);
     }
 }

@@ -11,8 +11,10 @@ import pab.rpg.domain.entity.AttributeSet;
 import pab.rpg.domain.entity.Character;
 import pab.rpg.domain.entity.GameSession;
 import pab.rpg.domain.entity.HealthState;
+import pab.rpg.domain.entity.Location;
 import pab.rpg.domain.entity.SessionStatus;
 import pab.rpg.domain.repository.GameSessionRepository;
+import pab.rpg.domain.repository.LocationRepository;
 import pab.rpg.domain.rules.ActionType;
 import pab.rpg.domain.rules.CheckResolution;
 import pab.rpg.domain.rules.CheckResolver;
@@ -22,6 +24,7 @@ import pab.rpg.exception.StaleSessionVersionException;
 import pab.rpg.service.GameEventService;
 import pab.rpg.service.GameSerssionService;
 import pab.rpg.service.IdempotencyService;
+import pab.rpg.service.MasterAdapter;
 import pab.rpg.service.NpcService;
 
 import java.time.Instant;
@@ -55,13 +58,17 @@ class ActionServiceImplTest {
     private CheckResolver checkResolver;
     @Mock
     private NpcService npcService;
+    @Mock
+    private LocationRepository locationRepository;
+    @Mock
+    private MasterAdapter masterAdapter;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private ActionServiceImpl service() {
         return new ActionServiceImpl(
                 gameSessionService, gameSessionRepository, gameEventService, idempotencyService, checkResolver,
-                List.of(), npcService, objectMapper
+                List.of(), npcService, objectMapper, locationRepository, masterAdapter
         );
     }
 
@@ -124,6 +131,9 @@ class ActionServiceImplTest {
         when(gameSessionRepository.saveAndFlush(any())).thenReturn(session);
         when(checkResolver.resolve(anyInt(), anyInt(), anyInt(), any()))
                 .thenReturn(new CheckResolution(123L, 12, 2, 0, 0, 14, Difficulty.MODERATE, 0, ResultGrade.EXITO));
+        when(locationRepository.findById(session.getCurrentLocationId()))
+                .thenReturn(Optional.of(new Location(session.getCurrentLocationId(), "village_square", "Plaza", "Una plaza tranquila.")));
+        when(masterAdapter.narrate(any())).thenReturn("Tu intento sale bien.");
 
         SubmitActionCommand command =
                 new SubmitActionCommand(session.getId(), session.getPlayerId(), "Miro alrededor.", ActionType.INVESTIGATION, null, 5L, UUID.randomUUID());
@@ -139,6 +149,31 @@ class ActionServiceImplTest {
     }
 
     @Test
+    void resolvesActionUsingInterpretedActionTypeWhenOmitted() {
+        GameSession session = session(5L);
+        when(gameSessionService.getSession(any(), any())).thenReturn(session);
+        when(idempotencyService.findExisting(any(), any())).thenReturn(Optional.empty());
+        when(gameSessionRepository.saveAndFlush(any())).thenReturn(session);
+        when(checkResolver.resolve(anyInt(), anyInt(), anyInt(), any()))
+                .thenReturn(new CheckResolution(123L, 12, 2, 0, 0, 14, Difficulty.MODERATE, 0, ResultGrade.EXITO));
+        when(locationRepository.findById(session.getCurrentLocationId()))
+                .thenReturn(Optional.of(new Location(session.getCurrentLocationId(), "village_square", "Plaza", "Una plaza tranquila.")));
+        when(npcService.getNpcsAtLocation(session.getCurrentLocationId())).thenReturn(List.of());
+        when(masterAdapter.interpret(any()))
+                .thenReturn(new MasterAdapter.ActionIntent(ActionType.INVESTIGATION, null));
+        when(masterAdapter.narrate(any())).thenReturn("Tu intento sale bien.");
+
+        SubmitActionCommand command =
+                new SubmitActionCommand(session.getId(), session.getPlayerId(), "Busco pistas.", null, null, 5L, UUID.randomUUID());
+
+        ActionResponse response = service().submitAction(command);
+
+        assertEquals("RESOLVED", response.status());
+        verify(masterAdapter, times(1)).interpret(any());
+        verify(gameEventService, times(1)).append(any(), eq("ACTION_RESOLVED"), any(), any(), any());
+    }
+
+    @Test
     void resolvesSocialActionWithTargetNpcAndChangesRelationship() {
         GameSession session = session(5L);
         UUID npcId = UUID.randomUUID();
@@ -148,6 +183,9 @@ class ActionServiceImplTest {
         when(checkResolver.resolve(anyInt(), anyInt(), anyInt(), any()))
                 .thenReturn(new CheckResolution(123L, 12, 2, 0, 0, 14, Difficulty.MODERATE, 0, ResultGrade.EXITO));
         when(npcService.changeRelationship(session.getId(), npcId, 1)).thenReturn(4);
+        when(locationRepository.findById(session.getCurrentLocationId()))
+                .thenReturn(Optional.of(new Location(session.getCurrentLocationId(), "village_square", "Plaza", "Una plaza tranquila.")));
+        when(masterAdapter.narrate(any())).thenReturn("Lo consigues.");
 
         SubmitActionCommand command =
                 new SubmitActionCommand(session.getId(), session.getPlayerId(), "Convenzo al guardia.", ActionType.SOCIAL, npcId, 5L, UUID.randomUUID());

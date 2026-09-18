@@ -10,12 +10,14 @@ import pab.rpg.domain.entity.CombatParticipantStatus;
 import pab.rpg.domain.entity.CombatStatus;
 import pab.rpg.domain.entity.CombatTeam;
 import pab.rpg.domain.entity.GameSession;
+import pab.rpg.domain.entity.Location;
 import pab.rpg.domain.entity.Npc;
 import pab.rpg.domain.entity.NpcStatus;
 import pab.rpg.domain.repository.CharacterRepository;
 import pab.rpg.domain.repository.CombatParticipantRepository;
 import pab.rpg.domain.repository.CombatRepository;
 import pab.rpg.domain.repository.GameSessionRepository;
+import pab.rpg.domain.repository.LocationRepository;
 import pab.rpg.domain.repository.NpcRepository;
 import pab.rpg.domain.rules.CheckResolution;
 import pab.rpg.domain.rules.CheckResolver;
@@ -25,6 +27,8 @@ import pab.rpg.exception.CombatNotAllowedException;
 import pab.rpg.exception.CombatNotFoundException;
 import pab.rpg.service.CombatService;
 import pab.rpg.service.GameEventService;
+import pab.rpg.service.MasterAdapter;
+import pab.rpg.service.MasterAdapter.NarrationRequest;
 
 import java.security.SecureRandom;
 import java.time.Instant;
@@ -51,6 +55,8 @@ public class CombatServiceImpl implements CombatService {
     private final CombatParticipantRepository combatParticipantRepository;
     private final CheckResolver checkResolver;
     private final GameEventService gameEventService;
+    private final LocationRepository locationRepository;
+    private final MasterAdapter masterAdapter;
     private final SecureRandom initiativeRandom = new SecureRandom();
 
     @Override
@@ -95,7 +101,7 @@ public class CombatServiceImpl implements CombatService {
         gameEventService.append(sessionId, "COMBAT_STARTED", session.getPlayerId(),
                 Map.of("combatId", combat.getId(), "opponents", npcIds), session.getWorldTime());
 
-        return toView(combat, participants);
+        return toView(combat, participants, null);
     }
 
     @Override
@@ -166,14 +172,70 @@ public class CombatServiceImpl implements CombatService {
         }
         combatRepository.save(combat);
 
-        return toView(combat, participants);
+        String narration = masterAdapter.narrate(new NarrationRequest(
+                sceneSummary(session.getCurrentLocationId()),
+                attacker.getName() + " ataca a " + target.getName(),
+                resolution.grade(),
+                "daño=" + damage + ", estado objetivo=" + target.getStatus()
+        ));
+
+        return toView(combat, participants, narration);
+    }
+
+    @Override
+    public CombatView performAttack(UUID sessionId, UUID combatId, String playerText) {
+        Combat combat = combatRepository.findById(combatId)
+                .filter(existing -> existing.getSessionId().equals(sessionId))
+                .orElseThrow(() -> new CombatNotFoundException("El combate " + combatId + " no existe en esta partida."));
+
+        List<CombatParticipant> participants = combatParticipantRepository.findAllByCombatIdOrderByTurnOrderAsc(combatId);
+
+        CombatParticipant attacker = participants.stream()
+                .filter(participant -> participant.getTurnOrder() == combat.getCurrentTurnOrder())
+                .findFirst()
+                .orElseThrow(() -> new CombatNotAllowedException("No hay un combatiente activo en este turno."));
+        if (attacker.getTeam() != CombatTeam.PLAYER) {
+            throw new CombatNotAllowedException("No es el turno del jugador.");
+        }
+
+        List<MasterAdapter.Candidate> candidates = participants.stream()
+                .filter(participant -> participant.getTeam() == CombatTeam.ENEMY && participant.getStatus() == CombatParticipantStatus.ACTIVE)
+                .map(participant -> new MasterAdapter.Candidate(participant.getId().toString(), participant.getName()))
+                .toList();
+
+        String selectedId = masterAdapter.selectCandidate(new MasterAdapter.CandidateSelectionRequest(playerText, candidates));
+        UUID targetParticipantId = parseParticipantId(selectedId);
+        if (targetParticipantId == null) {
+            throw new CombatNotAllowedException("No se identifica un objetivo claro para atacar.");
+        }
+
+        return performAttack(sessionId, combatId, attacker.getId(), targetParticipantId);
+    }
+
+    // A hallucinated/non-UUID target is dropped here; a real-but-invalid participant id (wrong team,
+    // already down) is still rejected by the existing checks in the 4-arg performAttack above.
+    private UUID parseParticipantId(String rawId) {
+        if (rawId == null || rawId.isBlank()) {
+            return null;
+        }
+        try {
+            return UUID.fromString(rawId);
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<CombatView> getActiveCombat(UUID sessionId) {
         return combatRepository.findBySessionIdAndStatus(sessionId, CombatStatus.ACTIVE)
-                .map(combat -> toView(combat, combatParticipantRepository.findAllByCombatIdOrderByTurnOrderAsc(combat.getId())));
+                .map(combat -> toView(combat, combatParticipantRepository.findAllByCombatIdOrderByTurnOrderAsc(combat.getId()), null));
+    }
+
+    private String sceneSummary(UUID locationId) {
+        Location location = locationRepository.findById(locationId)
+                .orElseThrow(() -> new IllegalStateException("Location must already be validated by the caller"));
+        return location.getName() + " — " + location.getDescription();
     }
 
     private Npc requireOpponent(UUID npcId, UUID locationId) {
@@ -250,7 +312,7 @@ public class CombatServiceImpl implements CombatService {
         }
     }
 
-    private CombatView toView(Combat combat, List<CombatParticipant> participants) {
+    private CombatView toView(Combat combat, List<CombatParticipant> participants, String narration) {
         UUID currentParticipantId = participants.stream()
                 .filter(participant -> participant.getTurnOrder() == combat.getCurrentTurnOrder())
                 .map(CombatParticipant::getId)
@@ -265,7 +327,7 @@ public class CombatServiceImpl implements CombatService {
                 ))
                 .toList();
 
-        return new CombatView(combat.getId(), combat.getStatus(), combat.getRoundNumber(), currentParticipantId, participantViews);
+        return new CombatView(combat.getId(), combat.getStatus(), combat.getRoundNumber(), currentParticipantId, participantViews, narration);
     }
 
     private record Draft(CombatTeam team, UUID characterId, UUID npcId, String name, int initiative, int healthMaximum) {

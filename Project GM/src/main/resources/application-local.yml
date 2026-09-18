@@ -10,13 +10,24 @@ spring:
   jpa:
     show-sql: true
 
+  http:
+    client:
+      connect-timeout: ${OPENAI_CONNECT_TIMEOUT:5s}
+      read-timeout: ${OPENAI_READ_TIMEOUT:20s}
+
 logging:
   level:
     pab.rpg: DEBUG
     org.hibernate.SQL: DEBUG
 
+# Requiere OPENAI_API_KEY y OPENAI_MODEL como variables de entorno; nunca hardcodear la API key aquí.
 openai:
-  enabled: false
+  enabled: ${OPENAI_ENABLED:true}
+  api-key: ${OPENAI_API_KEY}
+  base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+  model: ${OPENAI_MODEL:gpt-4o-mini}
+  max-output-tokens: ${OPENAI_MAX_OUTPUT_TOKENS:2048}
+  temperature: ${OPENAI_TEMPERATURE:0.7}
 
 security:
   development-user-enabled: true

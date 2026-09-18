@@ -15,6 +15,10 @@ public interface CombatService {
 
     CombatView performAttack(UUID sessionId, UUID combatId, UUID attackerParticipantId, UUID targetParticipantId);
 
+    // Derives the target from free text (attacker is always whoever's turn it currently is); the
+    // target text is resolved against the visible ENEMY participants via MasterAdapter.selectCandidate.
+    CombatView performAttack(UUID sessionId, UUID combatId, String playerText);
+
     Optional<CombatView> getActiveCombat(UUID sessionId);
 
     record CombatView(
@@ -22,7 +26,8 @@ public interface CombatService {
             CombatStatus status,
             int roundNumber,
             UUID currentParticipantId,
-            List<ParticipantView> participants
+            List<ParticipantView> participants,
+            String narration
     ) {
     }
 

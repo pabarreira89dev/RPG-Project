@@ -4,8 +4,8 @@ import pab.rpg.domain.rules.ActionType;
 
 import java.util.UUID;
 
-// actionType is a provisional input until real text interpretation (OpenAI) selects it from free text.
-// targetNpcId is only used by SOCIAL actions aimed at a specific NPC.
+// actionType/targetNpcId are optional overrides; if omitted, ActionServiceImpl derives them from the free
+// text via MasterAdapter.interpret(). targetNpcId (explicit or interpreted) is only used by SOCIAL actions.
 public record SubmitActionRequest(
         String text,
         ActionType actionType,

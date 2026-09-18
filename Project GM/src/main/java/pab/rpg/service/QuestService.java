@@ -13,6 +13,10 @@ public interface QuestService {
 
     QuestStateView advanceQuest(UUID sessionId, String questCode, String choiceKey);
 
+    // Derives choiceKey from free text, resolved against the current stage's available transitions
+    // via MasterAdapter.selectCandidate.
+    QuestStateView advanceQuestFromText(UUID sessionId, String questCode, String playerText);
+
     Optional<QuestStateView> getQuestState(UUID sessionId, String questCode);
 
     List<QuestStateView> getVisibleQuests(UUID sessionId);

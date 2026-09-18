@@ -60,6 +60,12 @@ public class GlobalExceptionHandler {
         return new ApiError("COMBAT_NOT_ALLOWED", exception.getMessage(), Instant.now());
     }
 
+    @ExceptionHandler(AiUnavailableException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public ApiError handleAiUnavailable(AiUnavailableException exception) {
+        return new ApiError("OPENAI_UNAVAILABLE", exception.getMessage(), Instant.now());
+    }
+
     @ExceptionHandler({IllegalArgumentException.class, NullPointerException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiError handleInvalidRequest(RuntimeException exception) {
