@@ -37,3 +37,7 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+### Entorno local (secretos, ver application-local.yml) ###
+.env
+.env.*

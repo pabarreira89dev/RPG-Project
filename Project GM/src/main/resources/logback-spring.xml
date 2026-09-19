@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- TDD MVP v0.2 §14: structured JSON logs, always carrying correlationId/sessionId from MDC (CorrelationIdFilter).
+     Never log the full OpenAI prompt/response here; OpenAiMasterAdapter only logs short diagnostic messages. -->
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeMdcKeyName>correlationId</includeMdcKeyName>
+            <includeMdcKeyName>sessionId</includeMdcKeyName>
+            <fieldNames>
+                <timestamp>timestamp</timestamp>
+                <message>message</message>
+                <logger>logger</logger>
+                <thread>thread</thread>
+                <level>level</level>
+            </fieldNames>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="JSON_CONSOLE"/>
+    </root>
+
+    <!-- Default level; overridden per-profile by the logging.level.pab.rpg property (e.g. application-local.yml). -->
+    <logger name="pab.rpg" level="INFO"/>
+</configuration>

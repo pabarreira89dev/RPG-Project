@@ -1,6 +1,7 @@
 package pab.rpg.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -64,11 +65,12 @@ class ActionServiceImplTest {
     private MasterAdapter masterAdapter;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
 
     private ActionServiceImpl service() {
         return new ActionServiceImpl(
                 gameSessionService, gameSessionRepository, gameEventService, idempotencyService, checkResolver,
-                List.of(), npcService, objectMapper, locationRepository, masterAdapter
+                List.of(), npcService, objectMapper, locationRepository, masterAdapter, meterRegistry
         );
     }
 

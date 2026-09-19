@@ -1,5 +1,6 @@
 package pab.rpg.service.impl;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ import java.util.UUID;
 public class GameSessionServiceImpl implements GameSessionService {
 
     private final GameSessionRepository gameSessionRepository;
+    private final MeterRegistry meterRegistry;
 
     @Override
     public GameSession createSession(CreateGameSessionCommand command) {
@@ -47,7 +49,9 @@ public class GameSessionServiceImpl implements GameSessionService {
                 character
         );
 
-        return gameSessionRepository.save(session);
+        session = gameSessionRepository.save(session);
+        meterRegistry.counter("pab.rpg.sessions.created").increment();
+        return session;
     }
 
     @Override
@@ -56,8 +60,10 @@ public class GameSessionServiceImpl implements GameSessionService {
         Objects.requireNonNull(sessionId, "sessionId must not be null");
         Objects.requireNonNull(playerId, "playerId must not be null");
 
-        return gameSessionRepository.findByIdAndPlayerId(sessionId, playerId)
+        GameSession session = gameSessionRepository.findByIdAndPlayerId(sessionId, playerId)
                 .orElseThrow(() -> new SessionNotFoundException(sessionId, playerId));
+        meterRegistry.counter("pab.rpg.sessions.retrieved").increment();
+        return session;
     }
 
     @Override

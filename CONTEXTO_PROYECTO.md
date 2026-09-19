@@ -88,7 +88,7 @@ DATABASE_PASSWORD
 En `Project GM/src/main/resources` existen:
 
 - `application.yml`: configuración común y perfil por defecto `local`.
-- `application-local.yml`: PostgreSQL local/externo, logs detallados, OpenAI real activado por defecto (requiere `OPENAI_API_KEY`/`OPENAI_MODEL` como variables de entorno; se puede desactivar con `OPENAI_ENABLED=false` para volver al stub) y usuario de desarrollo.
+- `application-local.yml`: PostgreSQL local/externo (host/BD fijos vía `DATABASE_URL`, usuario/contraseña vía `DATABASE_USERNAME`/`DATABASE_PASSWORD`, todas con default `admin`/`admin`/`jdbc:postgresql://localhost:5432/project_gm` para desarrollo), logs detallados, OpenAI real activado por defecto (requiere `OPENAI_API_KEY`/`OPENAI_MODEL` como variables de entorno, sin default; se puede desactivar con `OPENAI_ENABLED=false` para volver al stub) y usuario de desarrollo. Los valores locales actuales de estas variables se guardan en `Project GM/.env.local` (gitignored, ver sección "Estado de la sesión").
 - `application-test.yml`: base de datos de pruebas, OpenAI desactivado (stub, para que los tests sean deterministas y no dependan de red/credenciales).
 - `application-cloud.yml`: PostgreSQL y OpenAI configurados mediante variables de entorno, seguridad de desarrollo desactivada.
 
@@ -400,6 +400,33 @@ Motivo del cambio de orden: `GameSession.currentLocationId` ya existe pero no ap
 
 Los puntos 6 a 10 (combate, adaptador OpenAI con stub, narración conectada, e interpretación de texto libre para acciones/combate/misiones) están terminados y verificados: el proyecto compila y los 86 tests pasan. Los tres endpoints de intención del jugador (`POST .../actions`, `POST .../combat/{combatId}/attack`, `POST .../quests/{questCode}/advance`) aceptan ahora tanto IDs/claves explícitos (compatibilidad) como texto libre interpretado vía `MasterAdapter` (`interpret()` para acciones, `selectCandidate()` reutilizado para combate y misiones).
 
+### Punto 13 implementado: observabilidad (correlationId, logs estructurados, métricas)
+
+`pab.rpg.config.CorrelationIdFilter` (`OncePerRequestFilter`, orden `HIGHEST_PRECEDENCE`): añade `correlationId` (del header `X-Correlation-Id` si viene, si no un UUID nuevo) y, cuando la URL contiene `/sessions/{uuid}`, `sessionId`, ambos al MDC de SLF4J; devuelve el `correlationId` en la respuesta con el mismo header y limpia el MDC en el `finally`. `GlobalExceptionHandler.ApiError` gana el campo `correlationId` (leído del MDC), cumpliendo el formato de error de la sección 9.5 del TDD.
+
+Logs estructurados en JSON: `logback-spring.xml` nuevo con `LogstashEncoder` (dependencia `net.logstash.logback:logstash-logback-encoder`), incluye `correlationId`/`sessionId` del MDC en cada línea. Los niveles por logger (`logging.level.pab.rpg`, etc.) se siguen controlando desde `application-*.yml` como antes: Spring Boot aplica esas propiedades después de parsear el XML, así que no hace falta duplicarlas en el XML.
+
+Métricas Micrometer (expuestas ya en `/actuator/metrics` — `management.endpoints.web.exposure.include` ganó `metrics` en `application.yml` y en `application-local.yml`):
+
+- `pab.rpg.action.duration` (timer, tag `outcome=success|error`) alrededor de `ActionServiceImpl.submitAction`.
+- `pab.rpg.actions.resolved` (counter, tag `actionType`) cuando una acción pasa las `GameRule`s y se va a resolver.
+- `pab.rpg.session.version.conflicts` (counter) en `GlobalExceptionHandler`, incrementado tanto para `StaleSessionVersionException` como para `ObjectOptimisticLockingFailureException`.
+- `pab.rpg.validation.errors` (counter) en `GlobalExceptionHandler.handleInvalidRequest` (`INVALID_REQUEST`/400).
+- `pab.rpg.sessions.created` / `pab.rpg.sessions.retrieved` (counters) en `GameSessionServiceImpl.createSession`/`getSession`.
+- `pab.rpg.openai.duration` (timer, tags `operation=narrate|interpret|selectCandidate`, `outcome=success|error`) y `pab.rpg.openai.errors` (counter, tag `operation`) en `OpenAiMasterAdapter`, envolviendo las tres llamadas HTTP.
+- `pab.rpg.openai.tokens` (counter, tags `operation`, `direction=input|output`) leídos del campo `usage.input_tokens`/`usage.output_tokens` de la Responses API (nuevo record `Usage` en `OpenAiMasterAdapter`, con `@JsonProperty` porque el `ObjectMapper` no usa snake_case).
+- `pab.rpg.openai.estimated.cost.usd` (counter global, sin tags de alta cardinalidad) calculado a partir de `openai.cost-per-input-token-usd`/`openai.cost-per-output-token-usd` (nuevas propiedades en `OpenAiProperties`, por defecto `0` — si no se configuran, el coste estimado es 0). Decisión deliberada: el coste NO se etiqueta por `sessionId` en Micrometer (cardinalidad no acotada); en su lugar se loguea una línea `openai_cost_estimate` con tokens/coste, que ya lleva `sessionId` en el JSON gracias al MDC de `CorrelationIdFilter` — así el coste por sesión se puede extraer de los logs sin ensuciar las métricas.
+
+Sin cambios en `StubMasterAdapter` (no llama a red, no genera coste real). Tests actualizados por los nuevos parámetros de constructor: `ActionServiceImplTest` y `OpenAiMasterAdapterTest` ahora instancian un `SimpleMeterRegistry` de test; `OpenAiMasterAdapterTest`/`ActionServiceImplTest` no verifican las métricas en sí (fuera de alcance de esos tests unitarios), solo que el código sigue compilando y comportándose igual.
+
+Pendiente dentro de observabilidad (no implementado, fuera de alcance mínimo del TDD §14): dashboards/backend externo de métricas y logs (el TDD deja el backend sin decidir), rate limiting/cuotas por usuario (eso es más bien seguridad/límites, ver `MVP v0.3.md`).
+
+### Higiene de secretos y variables de entorno locales
+
+Se encontró y corrigió dos veces en la misma sesión una API key real de OpenAI hardcodeada como valor por defecto de `OPENAI_API_KEY` en `application-local.yml` (nunca llegó a `origin`, pero sí llegó a estar commiteada en local una vez). Ahora `${OPENAI_API_KEY}` no tiene default, igual que en `cloud`.
+
+Se creó `Project GM/.env.local` (añadido a `.gitignore` junto con `.env*`) como fichero de almacenamiento puro (formato dotenv) de los valores locales actuales de todas las variables de entorno referenciadas en `application-local.yml`: `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `OPENAI_ENABLED`, `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL`, `OPENAI_MAX_OUTPUT_TOKENS`, `OPENAI_TEMPERATURE`, `OPENAI_CONNECT_TIMEOUT`, `OPENAI_READ_TIMEOUT`. Este fichero NO se carga automáticamente por Spring Boot/Maven; hay que volcarlo a variables de entorno de la sesión de PowerShell a mano antes de `mvn spring-boot:run` si se quiere usar. `spring.datasource.username`/`password` en `application-local.yml` pasaron de estar hardcodeados (`admin`/`admin`) a `${DATABASE_USERNAME:admin}`/`${DATABASE_PASSWORD:admin}`, mismo patrón que el resto de variables del perfil local.
+
 ## Próximo paso cuando se retome
 
-No queda ningún punto pendiente del "Orden recomendado de trabajo" original (1–10). El vertical slice MVP v0.2 tiene interpretación de texto libre en sus tres flujos principales. Los pasos siguientes del TDD MVP v0.2 (no abordados todavía): 12) seguridad JWT, 13) observabilidad (correlationId, métricas de duración/errores/tokens, logs estructurados), 14) pruebas end-to-end del vertical slice completo. También quedan mejoras de alcance dentro del combate (moverse/defenderse/usar objeto, sistema de armas/objetos — GDD sección 11) y de misiones/NPCs (diálogo real que use `NpcKnowledgeFact`, todavía sin llamador).
+No queda ningún punto pendiente del "Orden recomendado de trabajo" original (1–10). El vertical slice MVP v0.2 tiene interpretación de texto libre en sus tres flujos principales, y observabilidad mínima (correlationId, logs JSON, métricas Micrometer) implementada (ver detalle arriba). Los pasos siguientes del TDD MVP v0.2 (no abordados todavía): 12) seguridad JWT, 14) pruebas end-to-end del vertical slice completo (más allá de lo ya cubierto en `Project GM automatics/`). También quedan mejoras de alcance dentro del combate (moverse/defenderse/usar objeto, sistema de armas/objetos — GDD sección 11) y de misiones/NPCs (diálogo real que use `NpcKnowledgeFact`, todavía sin llamador).

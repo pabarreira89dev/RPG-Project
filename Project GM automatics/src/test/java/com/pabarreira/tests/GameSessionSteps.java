@@ -1,13 +1,17 @@
 package com.pabarreira.tests;
 
 import com.pabarreira.tests.support.ApiConfig;
+import com.pabarreira.tests.support.AppLifecycle;
 import com.pabarreira.tests.support.LocationCatalog;
+import com.pabarreira.tests.support.NpcCatalog;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import io.restassured.RestAssured;
 import io.restassured.response.Response;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -32,6 +36,9 @@ public class GameSessionSteps {
     private long lastSessionVersion;
     private UUID lastIdempotencyKey;
     private String firstActionId;
+    private UUID lastCombatId;
+    private String lastCombatStatus;
+    private final Map<String, Integer> relationshipSnapshots = new HashMap<>();
     private Response response;
 
     @Given("un nuevo personaje llamado {string} de nivel {int}")
@@ -216,5 +223,167 @@ public class GameSessionSteps {
                 .queryParam("playerId", asPlayerId.toString())
                 .when()
                 .get("/api/v1/sessions/{sessionId}", sessionId.toString());
+    }
+
+    @Given("el jugador ha iniciado combate contra {string}")
+    public void el_jugador_ha_iniciado_combate_contra(String npcCode) {
+        RestAssured.baseURI = ApiConfig.BASE_URI;
+
+        Map<String, Object> body = Map.of("npcIds", List.of(NpcCatalog.idOf(npcCode).toString()));
+
+        response = given()
+                .contentType("application/json")
+                .queryParam("playerId", playerId.toString())
+                .body(body)
+                .when()
+                .post("/api/v1/sessions/{sessionId}/combat/start", lastSessionId.toString());
+
+        lastCombatId = UUID.fromString(response.jsonPath().getString("combatId"));
+    }
+
+    @When("el jugador ataca hasta terminar el combate")
+    public void el_jugador_ataca_hasta_terminar_el_combate() {
+        // Sin IA de enemigos: la suite simula el turno del bando ENEMY con IDs explícitos.
+        for (int intento = 0; intento < 80; intento++) {
+            String status = response.jsonPath().getString("status");
+            if ("COMPLETED".equals(status)) {
+                lastCombatStatus = status;
+                return;
+            }
+
+            List<Map<String, Object>> participants = response.jsonPath().getList("participants");
+            String currentParticipantId = response.jsonPath().getString("currentParticipantId");
+            String currentTeam = participants.stream()
+                    .filter(p -> currentParticipantId.equals(p.get("id")))
+                    .map(p -> (String) p.get("team"))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException("No se encontró al participante con el turno actual."));
+
+            if ("PLAYER".equals(currentTeam)) {
+                atacarComoJugador();
+            } else {
+                atacarComoEnemigo(participants, currentParticipantId);
+            }
+        }
+
+        throw new IllegalStateException("El combate no terminó tras 80 intentos de ataque.");
+    }
+
+    @Then("el combate aparece como completado")
+    public void el_combate_aparece_como_completado() {
+        // No se puede releer /combat tras terminar (getActiveCombat da 404 sin combate ACTIVE);
+        // se comprueba el estado capturado al terminar la pelea, no el `response` compartido (ya sobrescrito por pasos posteriores).
+        assertThat(lastCombatStatus, equalTo("COMPLETED"));
+    }
+
+    private void atacarComoJugador() {
+        Map<String, Object> body = Map.of("text", "Ataco a mi enemigo");
+        atacar(body);
+    }
+
+    private void atacarComoEnemigo(List<Map<String, Object>> participants, String enemyParticipantId) {
+        String playerParticipantId = participants.stream()
+                .filter(p -> "PLAYER".equals(p.get("team")))
+                .map(p -> (String) p.get("id"))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("No se encontró al participante del bando PLAYER."));
+
+        Map<String, Object> body = Map.of(
+                "attackerParticipantId", enemyParticipantId,
+                "targetParticipantId", playerParticipantId
+        );
+        atacar(body);
+    }
+
+    private void atacar(Map<String, Object> body) {
+        RestAssured.baseURI = ApiConfig.BASE_URI;
+
+        response = given()
+                .contentType("application/json")
+                .queryParam("playerId", playerId.toString())
+                .body(body)
+                .when()
+                .post("/api/v1/sessions/{sessionId}/combat/{combatId}/attack", lastSessionId.toString(), lastCombatId.toString());
+    }
+
+    @Given("el jugador ha iniciado la misión {string}")
+    public void el_jugador_ha_iniciado_la_mision(String questCode) {
+        RestAssured.baseURI = ApiConfig.BASE_URI;
+
+        response = given()
+                .queryParam("playerId", playerId.toString())
+                .when()
+                .post("/api/v1/sessions/{sessionId}/quests/{questCode}/start", lastSessionId.toString(), questCode);
+    }
+
+    @When("el jugador avanza la misión {string} con la decisión {string}")
+    public void el_jugador_avanza_la_mision_con_la_decision(String questCode, String choiceKey) {
+        RestAssured.baseURI = ApiConfig.BASE_URI;
+
+        Map<String, Object> body = Map.of("choiceKey", choiceKey);
+
+        response = given()
+                .contentType("application/json")
+                .queryParam("playerId", playerId.toString())
+                .body(body)
+                .when()
+                .post("/api/v1/sessions/{sessionId}/quests/{questCode}/advance", lastSessionId.toString(), questCode);
+    }
+
+    @Then("la misión {string} sigue en estado {string}")
+    public void la_mision_sigue_en_estado(String questCode, String expectedStatus) {
+        RestAssured.baseURI = ApiConfig.BASE_URI;
+
+        Response quests = given()
+                .queryParam("playerId", playerId.toString())
+                .when()
+                .get("/api/v1/sessions/{sessionId}/quests", lastSessionId.toString());
+
+        List<Map<String, Object>> questList = quests.jsonPath().getList("$");
+        String actualStatus = questList.stream()
+                .filter(q -> questCode.equals(q.get("questCode")))
+                .map(q -> (String) q.get("status"))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("La misión '" + questCode + "' no aparece entre las misiones visibles."));
+
+        assertThat(actualStatus, equalTo(expectedStatus));
+    }
+
+    @When("el jugador anota la relación actual con {string}")
+    public void el_jugador_anota_la_relacion_actual_con(String npcCode) {
+        relationshipSnapshots.put(npcCode, consultarRelacion(npcCode));
+    }
+
+    @Then("la relación con {string} sigue siendo la misma que antes del reinicio")
+    public void la_relacion_con_sigue_siendo_la_misma_que_antes_del_reinicio(String npcCode) {
+        Integer before = relationshipSnapshots.get(npcCode);
+        assertThat("no se anotó la relación con '" + npcCode + "' antes del reinicio", before, notNullValue());
+        assertThat(consultarRelacion(npcCode), equalTo(before));
+    }
+
+    private int consultarRelacion(String npcCode) {
+        RestAssured.baseURI = ApiConfig.BASE_URI;
+
+        Response npcs = given()
+                .queryParam("playerId", playerId.toString())
+                .when()
+                .get("/api/v1/sessions/{sessionId}/npcs", lastSessionId.toString());
+
+        List<Map<String, Object>> npcList = npcs.jsonPath().getList("$");
+        return npcList.stream()
+                .filter(npc -> npcCode.equals(npc.get("code")))
+                .map(npc -> (Integer) npc.get("relationship"))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("El NPC '" + npcCode + "' no es visible en la localización actual."));
+    }
+
+    @When("se reinicia la aplicación")
+    public void se_reinicia_la_aplicacion() {
+        AppLifecycle.restart();
+    }
+
+    @When("el jugador consulta su sesión de nuevo")
+    public void el_jugador_consulta_su_sesion_de_nuevo() {
+        consultarSesion(lastSessionId, playerId);
     }
 }

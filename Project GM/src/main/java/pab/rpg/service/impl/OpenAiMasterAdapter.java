@@ -1,8 +1,11 @@
 package pab.rpg.service.impl;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -62,10 +65,13 @@ public class OpenAiMasterAdapter implements MasterAdapter {
     private final RestClient restClient;
     private final OpenAiProperties properties;
     private final ObjectMapper objectMapper;
+    private final MeterRegistry meterRegistry;
 
-    public OpenAiMasterAdapter(OpenAiProperties properties, RestClient.Builder restClientBuilder, ObjectMapper objectMapper) {
+    public OpenAiMasterAdapter(OpenAiProperties properties, RestClient.Builder restClientBuilder, ObjectMapper objectMapper,
+                                MeterRegistry meterRegistry) {
         this.properties = properties;
         this.objectMapper = objectMapper;
+        this.meterRegistry = meterRegistry;
         this.restClient = restClientBuilder
                 .baseUrl(properties.baseUrl())
                 .defaultHeader("Authorization", "Bearer " + properties.apiKey())
@@ -74,6 +80,8 @@ public class OpenAiMasterAdapter implements MasterAdapter {
 
     @Override
     public String narrate(NarrationRequest request) {
+        Timer.Sample sample = Timer.start(meterRegistry);
+        boolean success = false;
         try {
             OpenAiResponse response = restClient.post()
                     .uri("/responses")
@@ -86,6 +94,7 @@ public class OpenAiMasterAdapter implements MasterAdapter {
                     ))
                     .retrieve()
                     .body(OpenAiResponse.class);
+            recordUsageMetrics("narrate", response);
 
             String narration = extractOutputText(response);
             if (narration == null || narration.isBlank()) {
@@ -93,15 +102,20 @@ public class OpenAiMasterAdapter implements MasterAdapter {
                 log.warn("OpenAI respondió sin narración utilizable (grade={})", request.grade());
                 throw new AiUnavailableException("OpenAI no devolvió narración.");
             }
+            success = true;
             return narration;
         } catch (RestClientException exception) {
             log.warn("Fallo al contactar con OpenAI: {}", exception.getMessage());
             throw new AiUnavailableException("No se pudo contactar con OpenAI: " + exception.getMessage());
+        } finally {
+            recordCallMetrics("narrate", sample, success);
         }
     }
 
     @Override
     public ActionIntent interpret(InterpretationRequest request) {
+        Timer.Sample sample = Timer.start(meterRegistry);
+        boolean success = false;
         try {
             OpenAiResponse response = restClient.post()
                     .uri("/responses")
@@ -118,6 +132,7 @@ public class OpenAiMasterAdapter implements MasterAdapter {
                     ))
                     .retrieve()
                     .body(OpenAiResponse.class);
+            recordUsageMetrics("interpret", response);
 
             String json = extractOutputText(response);
             if (json == null || json.isBlank()) {
@@ -126,7 +141,9 @@ public class OpenAiMasterAdapter implements MasterAdapter {
             }
 
             RawActionIntent raw = objectMapper.readValue(json, RawActionIntent.class);
-            return new ActionIntent(ActionType.valueOf(raw.actionType()), parseNpcId(raw.targetNpcId()));
+            ActionIntent intent = new ActionIntent(ActionType.valueOf(raw.actionType()), parseNpcId(raw.targetNpcId()));
+            success = true;
+            return intent;
         } catch (RestClientException exception) {
             log.warn("Fallo al contactar con OpenAI: {}", exception.getMessage());
             throw new AiUnavailableException("No se pudo contactar con OpenAI: " + exception.getMessage());
@@ -134,6 +151,8 @@ public class OpenAiMasterAdapter implements MasterAdapter {
             // JSON inválido o actionType desconocido: se rechaza sin mutar estado (TDD sección 10).
             log.warn("OpenAI devolvió una interpretación inválida: {}", exception.getMessage());
             throw new AiUnavailableException("OpenAI devolvió una interpretación inválida.");
+        } finally {
+            recordCallMetrics("interpret", sample, success);
         }
     }
 
@@ -152,6 +171,8 @@ public class OpenAiMasterAdapter implements MasterAdapter {
 
     @Override
     public String selectCandidate(CandidateSelectionRequest request) {
+        Timer.Sample sample = Timer.start(meterRegistry);
+        boolean success = false;
         try {
             OpenAiResponse response = restClient.post()
                     .uri("/responses")
@@ -168,6 +189,7 @@ public class OpenAiMasterAdapter implements MasterAdapter {
                     ))
                     .retrieve()
                     .body(OpenAiResponse.class);
+            recordUsageMetrics("selectCandidate", response);
 
             String json = extractOutputText(response);
             if (json == null || json.isBlank()) {
@@ -176,6 +198,7 @@ public class OpenAiMasterAdapter implements MasterAdapter {
             }
 
             RawCandidateSelection raw = objectMapper.readValue(json, RawCandidateSelection.class);
+            success = true;
             return raw.candidateId();
         } catch (RestClientException exception) {
             log.warn("Fallo al contactar con OpenAI: {}", exception.getMessage());
@@ -183,6 +206,8 @@ public class OpenAiMasterAdapter implements MasterAdapter {
         } catch (JsonProcessingException exception) {
             log.warn("OpenAI devolvió una selección inválida: {}", exception.getMessage());
             throw new AiUnavailableException("OpenAI devolvió una selección inválida.");
+        } finally {
+            recordCallMetrics("selectCandidate", sample, success);
         }
     }
 
@@ -249,8 +274,43 @@ public class OpenAiMasterAdapter implements MasterAdapter {
                 .orElse(null);
     }
 
+    // TDD §14 metrics: duration/errors per operation and input/output token counts.
+    private void recordCallMetrics(String operation, Timer.Sample sample, boolean success) {
+        sample.stop(meterRegistry.timer("pab.rpg.openai.duration", "operation", operation,
+                "outcome", success ? "success" : "error"));
+        if (!success) {
+            meterRegistry.counter("pab.rpg.openai.errors", "operation", operation).increment();
+        }
+    }
+
+    // sessionId is already in MDC (CorrelationIdFilter) for any request-bound call, so this log line
+    // is attributable per session without tagging Micrometer metrics with an unbounded sessionId.
+    private void recordUsageMetrics(String operation, OpenAiResponse response) {
+        if (response == null || response.usage() == null) {
+            return;
+        }
+        int inputTokens = response.usage().inputTokens();
+        int outputTokens = response.usage().outputTokens();
+        meterRegistry.counter("pab.rpg.openai.tokens", "operation", operation, "direction", "input").increment(inputTokens);
+        meterRegistry.counter("pab.rpg.openai.tokens", "operation", operation, "direction", "output").increment(outputTokens);
+
+        double estimatedCostUsd = inputTokens * properties.costPerInputTokenUsd() + outputTokens * properties.costPerOutputTokenUsd();
+        if (estimatedCostUsd > 0) {
+            meterRegistry.counter("pab.rpg.openai.estimated.cost.usd").increment(estimatedCostUsd);
+            log.info("openai_cost_estimate operation={} inputTokens={} outputTokens={} estimatedCostUsd={}",
+                    operation, inputTokens, outputTokens, estimatedCostUsd);
+        }
+    }
+
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private record OpenAiResponse(List<OutputItem> output) {
+    private record OpenAiResponse(List<OutputItem> output, Usage usage) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record Usage(
+            @JsonProperty("input_tokens") int inputTokens,
+            @JsonProperty("output_tokens") int outputTokens
+    ) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

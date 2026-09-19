@@ -1,6 +1,7 @@
 package pab.rpg.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -31,9 +32,10 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 class OpenAiMasterAdapterTest {
 
     private final OpenAiProperties properties = new OpenAiProperties(
-            true, "test-key", "https://fake-openai.test/v1", "gpt-test", 512, 0.5
+            true, "test-key", "https://fake-openai.test/v1", "gpt-test", 512, 0.5, 0, 0
     );
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
 
     @Test
     void narrateExtractsTextFromResponsesApiOutput() {
@@ -55,7 +57,7 @@ class OpenAiMasterAdapterTest {
                         }
                         """, MediaType.APPLICATION_JSON));
 
-        OpenAiMasterAdapter adapter = new OpenAiMasterAdapter(properties, builder, objectMapper);
+        OpenAiMasterAdapter adapter = new OpenAiMasterAdapter(properties, builder, objectMapper, meterRegistry);
 
         String narration = adapter.narrate(new NarrationRequest("Plaza", "Hablo con el guardia", ResultGrade.EXITO, "[]"));
 
@@ -71,7 +73,7 @@ class OpenAiMasterAdapterTest {
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withServerError());
 
-        OpenAiMasterAdapter adapter = new OpenAiMasterAdapter(properties, builder, objectMapper);
+        OpenAiMasterAdapter adapter = new OpenAiMasterAdapter(properties, builder, objectMapper, meterRegistry);
 
         assertThrows(AiUnavailableException.class,
                 () -> adapter.narrate(new NarrationRequest("Plaza", "Hablo con el guardia", ResultGrade.EXITO, "[]")));
@@ -98,7 +100,7 @@ class OpenAiMasterAdapterTest {
                         }
                         """.formatted(npcId), MediaType.APPLICATION_JSON));
 
-        OpenAiMasterAdapter adapter = new OpenAiMasterAdapter(properties, builder, objectMapper);
+        OpenAiMasterAdapter adapter = new OpenAiMasterAdapter(properties, builder, objectMapper, meterRegistry);
 
         ActionIntent intent = adapter.interpret(new InterpretationRequest(
                 "Plaza", "Hablo con el guardia", List.of(new VisibleNpc(npcId, "Guardia"))));
@@ -128,7 +130,7 @@ class OpenAiMasterAdapterTest {
                         }
                         """, MediaType.APPLICATION_JSON));
 
-        OpenAiMasterAdapter adapter = new OpenAiMasterAdapter(properties, builder, objectMapper);
+        OpenAiMasterAdapter adapter = new OpenAiMasterAdapter(properties, builder, objectMapper, meterRegistry);
 
         ActionIntent intent = adapter.interpret(new InterpretationRequest("Plaza", "Miro alrededor", List.of()));
 
@@ -157,7 +159,7 @@ class OpenAiMasterAdapterTest {
                         }
                         """.formatted(participantId), MediaType.APPLICATION_JSON));
 
-        OpenAiMasterAdapter adapter = new OpenAiMasterAdapter(properties, builder, objectMapper);
+        OpenAiMasterAdapter adapter = new OpenAiMasterAdapter(properties, builder, objectMapper, meterRegistry);
 
         String selected = adapter.selectCandidate(new CandidateSelectionRequest(
                 "Ataco al cazador", List.of(new Candidate(participantId.toString(), "Cazador"))));
@@ -186,7 +188,7 @@ class OpenAiMasterAdapterTest {
                         }
                         """, MediaType.APPLICATION_JSON));
 
-        OpenAiMasterAdapter adapter = new OpenAiMasterAdapter(properties, builder, objectMapper);
+        OpenAiMasterAdapter adapter = new OpenAiMasterAdapter(properties, builder, objectMapper, meterRegistry);
 
         String selected = adapter.selectCandidate(new CandidateSelectionRequest(
                 "No sé qué hacer", List.of(new Candidate("1", "Cazador"))));

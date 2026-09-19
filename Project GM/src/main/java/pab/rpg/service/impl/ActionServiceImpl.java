@@ -1,6 +1,8 @@
 package pab.rpg.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,34 +13,17 @@ import pab.rpg.domain.entity.GameSession;
 import pab.rpg.domain.entity.Location;
 import pab.rpg.domain.repository.GameSessionRepository;
 import pab.rpg.domain.repository.LocationRepository;
-import pab.rpg.domain.rules.ActionContext;
-import pab.rpg.domain.rules.ActionType;
-import pab.rpg.domain.rules.Attribute;
-import pab.rpg.domain.rules.CheckResolution;
-import pab.rpg.domain.rules.CheckResolver;
-import pab.rpg.domain.rules.GameRule;
-import pab.rpg.domain.rules.ResultGrade;
+import pab.rpg.domain.rules.*;
 import pab.rpg.exception.ActionNotAllowedException;
 import pab.rpg.exception.StaleSessionVersionException;
-import pab.rpg.service.ActionService;
-import pab.rpg.service.GameEventService;
-import pab.rpg.service.GameSerssionService;
-import pab.rpg.service.IdempotencyService;
-import pab.rpg.service.MasterAdapter;
+import pab.rpg.service.*;
 import pab.rpg.service.MasterAdapter.ActionIntent;
 import pab.rpg.service.MasterAdapter.InterpretationRequest;
 import pab.rpg.service.MasterAdapter.NarrationRequest;
 import pab.rpg.service.MasterAdapter.VisibleNpc;
-import pab.rpg.service.NpcService;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -48,7 +33,7 @@ public class ActionServiceImpl implements ActionService {
     private static final Duration ACTION_DURATION = Duration.ofMinutes(10);
     private static final int MAX_TEXT_LENGTH = 2000;
 
-    private final GameSerssionService gameSessionService;
+    private final GameSessionService gameSessionService;
     private final GameSessionRepository gameSessionRepository;
     private final GameEventService gameEventService;
     private final IdempotencyService idempotencyService;
@@ -58,11 +43,24 @@ public class ActionServiceImpl implements ActionService {
     private final ObjectMapper objectMapper;
     private final LocationRepository locationRepository;
     private final MasterAdapter masterAdapter;
+    private final MeterRegistry meterRegistry;
 
     @Override
     public ActionResponse submitAction(SubmitActionCommand command) {
         validate(command);
 
+        Timer.Sample sample = Timer.start(meterRegistry);
+        boolean success = false;
+        try {
+            ActionResponse response = resolveAction(command);
+            success = true;
+            return response;
+        } finally {
+            sample.stop(meterRegistry.timer("pab.rpg.action.duration", "outcome", success ? "success" : "error"));
+        }
+    }
+
+    private ActionResponse resolveAction(SubmitActionCommand command) {
         GameSession session = gameSessionService.getSession(command.sessionId(), command.playerId());
 
         Optional<IdempotencyService.StoredActionResult> existing =
@@ -91,6 +89,7 @@ public class ActionServiceImpl implements ActionService {
 
         ActionContext context = new ActionContext(session, actionType, targetNpcId);
         gameRules.forEach(rule -> rule.check(context));
+        meterRegistry.counter("pab.rpg.actions.resolved", "actionType", actionType.name()).increment();
 
         CheckResolution resolution = checkResolver.resolve(
                 attributeScore(session.getCharacter().getAttributes(), actionType.getAttribute()),
