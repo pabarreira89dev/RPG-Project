@@ -9,7 +9,7 @@ import pab.rpg.domain.entity.GameSession;
 import pab.rpg.domain.entity.SessionStatus;
 import pab.rpg.domain.repository.GameSessionRepository;
 import pab.rpg.exception.SessionNotFoundException;
-import pab.rpg.service.GameSerssionService;
+import pab.rpg.service.GameSessionService;
 
 import java.time.Instant;
 import java.util.List;
@@ -19,7 +19,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class GameSessionServiceImpl implements GameSerssionService {
+public class GameSessionServiceImpl implements GameSessionService {
 
     private final GameSessionRepository gameSessionRepository;
 

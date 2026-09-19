@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import pab.rpg.api.dto.request.AdvanceQuestRequest;
 import pab.rpg.api.dto.response.QuestStateResponse;
-import pab.rpg.service.GameSerssionService;
+import pab.rpg.service.GameSessionService;
 import pab.rpg.service.QuestService;
 
 import java.util.List;
@@ -21,7 +21,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class QuestController {
 
-    private final GameSerssionService gameSessionService;
+    private final GameSessionService gameSessionService;
     private final QuestService questService;
 
     @GetMapping

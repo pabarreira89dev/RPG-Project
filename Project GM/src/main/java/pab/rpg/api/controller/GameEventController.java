@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import pab.rpg.api.dto.response.GameEventResponse;
 import pab.rpg.service.GameEventService;
-import pab.rpg.service.GameSerssionService;
+import pab.rpg.service.GameSessionService;
 
 import java.util.List;
 import java.util.UUID;
@@ -19,7 +19,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class GameEventController {
 
-    private final GameSerssionService gameSessionService;
+    private final GameSessionService gameSessionService;
     private final GameEventService gameEventService;
 
     @GetMapping

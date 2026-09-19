@@ -18,6 +18,7 @@ import pab.rpg.domain.rules.CheckResolution;
 import pab.rpg.domain.rules.CheckResolver;
 import pab.rpg.domain.rules.GameRule;
 import pab.rpg.domain.rules.ResultGrade;
+import pab.rpg.exception.ActionNotAllowedException;
 import pab.rpg.exception.StaleSessionVersionException;
 import pab.rpg.service.ActionService;
 import pab.rpg.service.GameEventService;
@@ -199,9 +200,12 @@ public class ActionServiceImpl implements ActionService {
         };
     }
 
+    // Reachable before gameRules runs (interpret() needs the scene summary), so this must reject with the
+    // same domain error as LocationExistsRule instead of assuming the location was already validated.
     private String sceneSummary(UUID locationId) {
-        Location location = locationRepository.findById(locationId)
-                .orElseThrow(() -> new IllegalStateException("Location must already be validated by the caller"));
+        Location location = Optional.ofNullable(locationId)
+                .flatMap(locationRepository::findById)
+                .orElseThrow(() -> new ActionNotAllowedException("La sesión no está en una localización válida."));
         return location.getName() + " — " + location.getDescription();
     }
 

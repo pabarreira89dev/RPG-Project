@@ -13,7 +13,7 @@ import pab.rpg.api.dto.request.StartCombatRequest;
 import pab.rpg.api.dto.response.CombatResponse;
 import pab.rpg.exception.CombatNotFoundException;
 import pab.rpg.service.CombatService;
-import pab.rpg.service.GameSerssionService;
+import pab.rpg.service.GameSessionService;
 
 import java.util.UUID;
 
@@ -22,7 +22,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CombatController {
 
-    private final GameSerssionService gameSessionService;
+    private final GameSessionService gameSessionService;
     private final CombatService combatService;
 
     @GetMapping

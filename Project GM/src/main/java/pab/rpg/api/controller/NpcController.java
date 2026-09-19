@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import pab.rpg.api.dto.response.NpcResponse;
 import pab.rpg.domain.entity.GameSession;
-import pab.rpg.service.GameSerssionService;
+import pab.rpg.service.GameSessionService;
 import pab.rpg.service.NpcService;
 
 import java.util.List;
@@ -19,7 +19,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class NpcController {
 
-    private final GameSerssionService gameSessionService;
+    private final GameSessionService gameSessionService;
     private final NpcService npcService;
 
     @GetMapping

@@ -35,10 +35,10 @@ public class QuestStage {
     @Column(nullable = false, length = 500)
     private String description;
 
-    @Column(nullable = false)
+    @Column(name = "is_initial", nullable = false)
     private boolean initial;
 
-    @Column(nullable = false)
+    @Column(name = "is_terminal", nullable = false)
     private boolean terminal;
 
 }

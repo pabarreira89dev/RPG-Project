@@ -146,7 +146,7 @@ Incluye las tablas `player_character` y `game_session`, la relación uno a uno m
 
 La capa de servicio de partidas está organizada así:
 
-- `pab.rpg.service.GameSerssionService`: interfaz pública del servicio.
+- `pab.rpg.service.GameSessionService`: interfaz pública del servicio.
 - `pab.rpg.service.impl.GameSessionServiceImpl`: implementación Spring del servicio.
 - `pab.rpg.service.CreateGameSessionCommand`: comando de creación.
 - `pab.rpg.exception.SessionNotFoundException`: error de consulta no encontrada.
@@ -187,7 +187,7 @@ Servicios nuevos:
 
 Endpoint de diagnóstico añadido:
 
-- `GET /api/v1/sessions/{sessionId}/events?playerId={playerId}&after={sequence}` en `pab.rpg.api.controller.GameEventController`, que reutiliza `GameSerssionService.getSession` para validar que la sesión pertenece al jugador.
+- `GET /api/v1/sessions/{sessionId}/events?playerId={playerId}&after={sequence}` en `pab.rpg.api.controller.GameEventController`, que reutiliza `GameSessionService.getSession` para validar que la sesión pertenece al jugador.
 
 Tests unitarios con Mockito: `GameEventServiceImplTest` e `IdempotencyServiceImplTest`, cubriendo el cálculo de `sequence` y el registro/búsqueda de resultados idempotentes.
 
@@ -212,7 +212,7 @@ Endpoint nuevo:
 `pab.rpg.service.ActionService` / `impl.ActionServiceImpl` implementa el flujo:
 
 1. Valida el comando (`text` no vacío, longitud máxima 2000).
-2. Carga la sesión con `GameSerssionService.getSession` (valida que pertenece al jugador).
+2. Carga la sesión con `GameSessionService.getSession` (valida que pertenece al jugador).
 3. Comprueba idempotencia con `IdempotencyService.findExisting`; si la acción ya se procesó, devuelve la respuesta guardada sin repetir nada.
 4. Compara `expectedVersion` con la versión real de la sesión; si no coincide, lanza `StaleSessionVersionException`.
 5. Resuelve la tirada con `CheckResolver`.
@@ -259,7 +259,7 @@ Entidades nuevas en `domain.entity`: `Npc`, `NpcStatus` (enum `ALIVE`/`DEAD`), `
 
 Servicio nuevo `pab.rpg.service.NpcService` / `impl.NpcServiceImpl`: `getNpcsAtLocation(locationId)`, `getRelationshipValue(sessionId, npcId)` (devuelve 0 si no existe fila de relación todavía), `changeRelationship(sessionId, npcId, delta)` (crea la fila si no existe, con valor inicial 0, y aplica `Relationship.changeBy`), `recordKnowledge(sessionId, npcId, factKey)` (inserción idempotente, devuelve si el hecho era nuevo) y `knowsFact(sessionId, npcId, factKey)`.
 
-Endpoint de solo lectura nuevo: `GET /api/v1/sessions/{sessionId}/npcs?playerId={playerId}` en `pab.rpg.api.controller.NpcController`, que valida la sesión con `GameSerssionService.getSession` y devuelve los NPCs de la localización actual con su relación (`NpcResponse`), igual al "relaciones conocidas" del contrato 9.2 del TDD.
+Endpoint de solo lectura nuevo: `GET /api/v1/sessions/{sessionId}/npcs?playerId={playerId}` en `pab.rpg.api.controller.NpcController`, que valida la sesión con `GameSessionService.getSession` y devuelve los NPCs de la localización actual con su relación (`NpcResponse`), igual al "relaciones conocidas" del contrato 9.2 del TDD.
 
 `SubmitActionRequest`/`SubmitActionCommand` añaden el campo opcional `targetNpcId` para acciones que apuntan a un NPC concreto. Nueva regla `pab.rpg.domain.rules.NpcTargetRule` (añadida a `ActionContext`, que ahora también lleva `targetNpcId`): si se indica un NPC, debe existir y estar en la localización actual de la sesión, si no lanza `ActionNotAllowedException`.
 
@@ -283,7 +283,7 @@ Servicio nuevo `pab.rpg.service.QuestService` (con el record anidado `QuestState
 
 Errores nuevos: `pab.rpg.exception.QuestNotFoundException` → 404 `QUEST_NOT_FOUND`; `pab.rpg.exception.QuestTransitionNotAllowedException` → 422 `QUEST_TRANSITION_NOT_ALLOWED` en `GlobalExceptionHandler`.
 
-Endpoints nuevos en `pab.rpg.api.controller.QuestController` (mismo patrón que `NpcController`: valida la sesión con `GameSerssionService.getSession` antes de delegar):
+Endpoints nuevos en `pab.rpg.api.controller.QuestController` (mismo patrón que `NpcController`: valida la sesión con `GameSessionService.getSession` antes de delegar):
 
 - `GET /api/v1/sessions/{sessionId}/quests?playerId={playerId}`: misiones visibles de la sesión.
 - `POST /api/v1/sessions/{sessionId}/quests/{questCode}/start?playerId={playerId}`.
@@ -309,7 +309,7 @@ Servicio nuevo `pab.rpg.service.CombatService` (con `CombatView`/`ParticipantVie
 
 Errores nuevos: `pab.rpg.exception.CombatNotFoundException` → 404 `COMBAT_NOT_FOUND`; `pab.rpg.exception.CombatNotAllowedException` → 422 `COMBAT_NOT_ALLOWED` en `GlobalExceptionHandler`.
 
-Endpoints nuevos en `pab.rpg.api.controller.CombatController` (mismo patrón que `QuestController`: valida la sesión con `GameSerssionService.getSession` antes de delegar):
+Endpoints nuevos en `pab.rpg.api.controller.CombatController` (mismo patrón que `QuestController`: valida la sesión con `GameSessionService.getSession` antes de delegar):
 
 - `GET /api/v1/sessions/{sessionId}/combat?playerId={playerId}`: combate activo (404 si no hay ninguno).
 - `POST /api/v1/sessions/{sessionId}/combat/start?playerId={playerId}` con body `StartCombatRequest` (`npcIds`).

@@ -13,7 +13,7 @@ import pab.rpg.api.dto.request.CreateSessionRequest;
 import pab.rpg.api.mapper.CreateSessionRequestMapper;
 import pab.rpg.api.dto.response.GameSessionResponse;
 import pab.rpg.domain.entity.GameSession;
-import pab.rpg.service.GameSerssionService;
+import pab.rpg.service.GameSessionService;
 
 import java.net.URI;
 import java.util.List;
@@ -24,7 +24,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class GameSessionController {
 
-    private final GameSerssionService gameSessionService;
+    private final GameSessionService gameSessionService;
     private final CreateSessionRequestMapper createSessionRequestMapper;
 
     @PostMapping

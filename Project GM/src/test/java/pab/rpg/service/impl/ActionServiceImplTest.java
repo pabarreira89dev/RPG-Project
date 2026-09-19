@@ -22,7 +22,7 @@ import pab.rpg.domain.rules.Difficulty;
 import pab.rpg.domain.rules.ResultGrade;
 import pab.rpg.exception.StaleSessionVersionException;
 import pab.rpg.service.GameEventService;
-import pab.rpg.service.GameSerssionService;
+import pab.rpg.service.GameSessionService;
 import pab.rpg.service.IdempotencyService;
 import pab.rpg.service.MasterAdapter;
 import pab.rpg.service.NpcService;
@@ -47,7 +47,7 @@ import static org.mockito.Mockito.when;
 class ActionServiceImplTest {
 
     @Mock
-    private GameSerssionService gameSessionService;
+    private GameSessionService gameSessionService;
     @Mock
     private GameSessionRepository gameSessionRepository;
     @Mock

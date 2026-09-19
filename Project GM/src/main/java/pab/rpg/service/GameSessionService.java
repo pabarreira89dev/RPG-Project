@@ -6,7 +6,7 @@ import pab.rpg.domain.entity.GameSession;
 import java.util.List;
 import java.util.UUID;
 
-public interface GameSerssionService {
+public interface GameSessionService {
 
     GameSession createSession(CreateGameSessionCommand command);
 

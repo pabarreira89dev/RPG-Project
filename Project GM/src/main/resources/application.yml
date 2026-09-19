@@ -7,7 +7,8 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: update
+      # Flyway owns the schema; Hibernate must only validate it, never auto-create/alter tables.
+      ddl-auto: validate
     properties:
       hibernate:
         jdbc:
