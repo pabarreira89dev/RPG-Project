@@ -2,6 +2,8 @@ package pab.rpg.service.impl;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pab.rpg.api.dto.CreateGameSessionCommand;
@@ -22,12 +24,20 @@ import java.util.UUID;
 @Transactional
 public class GameSessionServiceImpl implements GameSessionService {
 
+    private static final Logger LOG = LoggerFactory.getLogger(GameSessionServiceImpl.class);
+
     private final GameSessionRepository gameSessionRepository;
     private final MeterRegistry meterRegistry;
 
     @Override
     public GameSession createSession(CreateGameSessionCommand command) {
         validate(command);
+
+        LOG.info("Creating new game session for playerId={} in worldId={} at locationId={}",
+                command.playerId(),
+                command.worldId(),
+                command.currentLocationId()
+        );
 
         Character character = new Character(
                 null,
@@ -51,6 +61,13 @@ public class GameSessionServiceImpl implements GameSessionService {
 
         session = gameSessionRepository.save(session);
         meterRegistry.counter("pab.rpg.sessions.created").increment();
+
+        LOG.info("Created new game session with id={} for playerId={} in worldId={}",
+                session.getId(),
+                session.getPlayerId(),
+                session.getWorldId()
+        );
+
         return session;
     }
 
@@ -59,6 +76,8 @@ public class GameSessionServiceImpl implements GameSessionService {
     public GameSession getSession(UUID sessionId, UUID playerId) {
         Objects.requireNonNull(sessionId, "sessionId must not be null");
         Objects.requireNonNull(playerId, "playerId must not be null");
+
+        LOG.info("Retrieving game session with id={} for playerId={}", sessionId, playerId);
 
         GameSession session = gameSessionRepository.findByIdAndPlayerId(sessionId, playerId)
                 .orElseThrow(() -> new SessionNotFoundException(sessionId, playerId));
@@ -70,6 +89,9 @@ public class GameSessionServiceImpl implements GameSessionService {
     @Transactional(readOnly = true)
     public List<GameSession> getSessions(UUID playerId) {
         Objects.requireNonNull(playerId, "playerId must not be null");
+
+        LOG.info("Retrieving all game sessions for playerId={}", playerId);
+
         return gameSessionRepository.findAllByPlayerIdOrderByWorldTimeDesc(playerId);
     }
 

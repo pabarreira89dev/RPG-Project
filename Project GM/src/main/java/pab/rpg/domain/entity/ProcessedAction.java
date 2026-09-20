@@ -38,7 +38,7 @@ public class ProcessedAction {
     private UUID actionId;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(nullable = false, columnDefinition = "jsonb")
+    @Column(nullable = false, columnDefinition = "json")
     private Map<String, Object> responsePayload;
 
     @Column(nullable = false)

@@ -1,12 +1,12 @@
 CREATE TABLE game_event (
-    id UUID PRIMARY KEY,
-    session_id UUID NOT NULL,
+    id CHAR(36) PRIMARY KEY,
+    session_id CHAR(36) NOT NULL,
     sequence BIGINT NOT NULL,
     type VARCHAR(60) NOT NULL,
-    actor_id UUID,
-    payload JSONB NOT NULL,
-    world_time TIMESTAMP WITH TIME ZONE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    actor_id CHAR(36),
+    payload JSON NOT NULL,
+    world_time DATETIME NOT NULL,
+    created_at DATETIME NOT NULL,
     CONSTRAINT fk_game_event_session
         FOREIGN KEY (session_id)
         REFERENCES game_session (id),
@@ -18,12 +18,12 @@ CREATE INDEX idx_game_event_session_id
     ON game_event (session_id);
 
 CREATE TABLE processed_action (
-    id UUID PRIMARY KEY,
-    session_id UUID NOT NULL,
-    idempotency_key UUID NOT NULL,
-    action_id UUID NOT NULL,
-    response_payload JSONB NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    id CHAR(36) PRIMARY KEY,
+    session_id CHAR(36) NOT NULL,
+    idempotency_key CHAR(36) NOT NULL,
+    action_id CHAR(36) NOT NULL,
+    response_payload JSON NOT NULL,
+    created_at DATETIME NOT NULL,
     CONSTRAINT fk_processed_action_session
         FOREIGN KEY (session_id)
         REFERENCES game_session (id),

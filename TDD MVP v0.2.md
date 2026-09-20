@@ -25,7 +25,7 @@ La arquitectura será un monolito modular. No se dividirá en microservicios dur
 | Framework | Spring Boot 4.1.1 |
 | Build | Maven |
 | API | REST/JSON sobre HTTPS |
-| Persistencia | PostgreSQL 16+ |
+| Persistencia | MySQL 8+ |
 | Acceso a datos | Spring Data JPA/Hibernate |
 | Migraciones | Flyway 13.7.0 |
 | Mapeo DTO/comando | MapStruct 1.6.3 |
@@ -35,10 +35,10 @@ La arquitectura será un monolito modular. No se dividirá en microservicios dur
 | IDs | UUID |
 | Fechas | Instant en UTC |
 | Arquitectura | Monolito modular con límites de paquete |
-| Eventos | Event log append-only en PostgreSQL |
+| Eventos | Event log append-only en MySQL |
 | Concurrencia | Optimistic locking con version de agregado |
 | Transporte de narración | Respuesta REST síncrona en MVP |
-| Ejecución local | Maven y PostgreSQL instalado o gestionado externamente |
+| Ejecución local | Maven y MySQL instalado o gestionado externamente |
 | Observabilidad | Actuator, logs estructurados y métricas Micrometer |
 | Idioma inicial | Español para contenido y narración |
 
@@ -117,7 +117,7 @@ Application layer
     |                    |
     +----------+---------+
                v
-        PostgreSQL + Flyway
+        MySQL + Flyway
         - world state
         - event log
         - conversation turns
@@ -257,7 +257,7 @@ Item
 - durability: int?
 ```
 
-Las colecciones pequeñas de atributos, habilidades y estados pueden almacenarse como JSONB dentro de sus agregados en el MVP. Las relaciones, misiones, eventos e inventario tendrán tablas propias para poder consultarse y auditarse.
+Las colecciones pequeñas de atributos, habilidades y estados pueden almacenarse como JSON dentro de sus agregados en el MVP. Las relaciones, misiones, eventos e inventario tendrán tablas propias para poder consultarse y auditarse.
 
 ## 8. Reglas de juego
 
@@ -492,12 +492,12 @@ world_snapshot
 
 ### Servicios externos configurables
 
-- PostgreSQL administrado o instalación local.
+- MySQL administrado o instalación local.
 - Proveedor de identidad compatible con JWT, configurable mediante issuer y audience.
 - Gestor de secretos del entorno de despliegue o variables de entorno.
 - Backend de logs y métricas compatible con la plataforma elegida.
 
-La aplicación no dependerá de una cuenta, región o servicio propietario de un proveedor cloud concreto. El despliegue futuro podrá realizarse en cualquier plataforma que permita ejecutar Java 21, exponer la API por HTTPS, conectar con PostgreSQL y acceder a la API de OpenAI.
+La aplicación no dependerá de una cuenta, región o servicio propietario de un proveedor cloud concreto. El despliegue futuro podrá realizarse en cualquier plataforma que permita ejecutar Java 21, exponer la API por HTTPS, conectar con MySQL y acceder a la API de OpenAI.
 
 ### Configuración
 
@@ -558,7 +558,7 @@ Logs estructurados en JSON. Nunca se registra el prompt completo ni datos sensib
 ### Integración
 
 - migraciones Flyway;
-- repositorios PostgreSQL;
+- repositorios MySQL;
 - transacción de una acción;
 - optimistic locking;
 - idempotencia;
@@ -589,11 +589,11 @@ Logs estructurados en JSON. Nunca se registra el prompt completo ni datos sensib
 
 ## 16. Ejecución y despliegue
 
-La aplicación se ejecutará directamente mediante Maven. PostgreSQL deberá estar instalado localmente o disponible como servicio externo. WireMock podrá ejecutarse como dependencia de pruebas o sustituirse por un stub en memoria.
+La aplicación se ejecutará directamente mediante Maven. MySQL deberá estar instalado localmente o disponible como servicio externo. WireMock podrá ejecutarse como dependencia de pruebas o sustituirse por un stub en memoria.
 
 Perfiles:
 
-- `local`: PostgreSQL local o externo, OpenAI stub y usuario de desarrollo.
+- `local`: MySQL local o externo, OpenAI stub y usuario de desarrollo.
 - `test`: base de datos de pruebas dedicada o instancia efímera gestionada por la infraestructura de pruebas.
 - `cloud`: OpenAI real, proveedor JWT elegido, gestor de secretos y backend de observabilidad elegidos.
 
@@ -608,7 +608,7 @@ Comandos previstos:
 ## 17. Orden de implementación
 
 1. Crear proyecto Spring Boot, configuración y perfiles.
-2. Añadir PostgreSQL, Flyway y esquema inicial.
+2. Añadir MySQL, Flyway y esquema inicial.
 3. Implementar `GameSession` y `Character`.
 4. Implementar estado visible y endpoint de consulta.
 5. Implementar eventos e idempotencia.
@@ -634,7 +634,7 @@ El MVP v0.2 estará técnicamente listo cuando:
 - todos los cambios relevantes tengan eventos auditables;
 - las invariantes críticas estén cubiertas por pruebas;
 - los fallos de OpenAI no corrompan partidas;
-- la aplicación pueda ejecutarse localmente mediante Maven con una base de datos PostgreSQL configurada.
+- la aplicación pueda ejecutarse localmente mediante Maven con una base de datos MySQL configurada.
 
 ## 19. Evolución posterior
 

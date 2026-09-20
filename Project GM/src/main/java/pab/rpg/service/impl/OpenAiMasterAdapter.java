@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 @ConditionalOnProperty(prefix = "openai", name = "enabled", havingValue = "true")
 public class OpenAiMasterAdapter implements MasterAdapter {
 
-    private static final Logger log = LoggerFactory.getLogger(OpenAiMasterAdapter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(OpenAiMasterAdapter.class);
 
     private static final String NARRATION_INSTRUCTIONS = """
             Eres el narrador de un RPG de fantasía. Narra en español, en un párrafo breve, el resultado \
@@ -68,7 +68,7 @@ public class OpenAiMasterAdapter implements MasterAdapter {
     private final MeterRegistry meterRegistry;
 
     public OpenAiMasterAdapter(OpenAiProperties properties, RestClient.Builder restClientBuilder, ObjectMapper objectMapper,
-                                MeterRegistry meterRegistry) {
+                               MeterRegistry meterRegistry) {
         this.properties = properties;
         this.objectMapper = objectMapper;
         this.meterRegistry = meterRegistry;
@@ -99,13 +99,13 @@ public class OpenAiMasterAdapter implements MasterAdapter {
             String narration = extractOutputText(response);
             if (narration == null || narration.isBlank()) {
                 // Diagnóstico sin volcar el prompt/la respuesta completa (pueden contener datos de la partida).
-                log.warn("OpenAI respondió sin narración utilizable (grade={})", request.grade());
+                LOG.warn("OpenAI respondió sin narración utilizable (grade={})", request.grade());
                 throw new AiUnavailableException("OpenAI no devolvió narración.");
             }
             success = true;
             return narration;
         } catch (RestClientException exception) {
-            log.warn("Fallo al contactar con OpenAI: {}", exception.getMessage());
+            LOG.warn("Fallo al contactar con OpenAI: {}", exception.getMessage());
             throw new AiUnavailableException("No se pudo contactar con OpenAI: " + exception.getMessage());
         } finally {
             recordCallMetrics("narrate", sample, success);
@@ -115,6 +115,15 @@ public class OpenAiMasterAdapter implements MasterAdapter {
     @Override
     public ActionIntent interpret(InterpretationRequest request) {
         Timer.Sample sample = Timer.start(meterRegistry);
+
+        LOG.info("Interpretando intención del jugador: sceneSummary='{}', playerText='{}', visibleNpcs={}",
+                request.sceneSummary(),
+                request.playerText(),
+                request.visibleNpcs().stream()
+                        .map(npc -> npc.id() + ":" + npc.name())
+                        .collect(Collectors.joining(", "))
+        );
+
         boolean success = false;
         try {
             OpenAiResponse response = restClient.post()
@@ -136,20 +145,22 @@ public class OpenAiMasterAdapter implements MasterAdapter {
 
             String json = extractOutputText(response);
             if (json == null || json.isBlank()) {
-                log.warn("OpenAI no devolvió una interpretación utilizable.");
+                LOG.warn("OpenAI no devolvió una interpretación utilizable.");
                 throw new AiUnavailableException("OpenAI no devolvió una interpretación utilizable.");
             }
+
+            LOG.info("OpenAI interpretó la intención del jugador como: {}", json);
 
             RawActionIntent raw = objectMapper.readValue(json, RawActionIntent.class);
             ActionIntent intent = new ActionIntent(ActionType.valueOf(raw.actionType()), parseNpcId(raw.targetNpcId()));
             success = true;
             return intent;
         } catch (RestClientException exception) {
-            log.warn("Fallo al contactar con OpenAI: {}", exception.getMessage());
+            LOG.warn("Fallo al contactar con OpenAI: {}", exception.getMessage());
             throw new AiUnavailableException("No se pudo contactar con OpenAI: " + exception.getMessage());
         } catch (JsonProcessingException | IllegalArgumentException exception) {
             // JSON inválido o actionType desconocido: se rechaza sin mutar estado (TDD sección 10).
-            log.warn("OpenAI devolvió una interpretación inválida: {}", exception.getMessage());
+            LOG.warn("OpenAI devolvió una interpretación inválida: {}", exception.getMessage());
             throw new AiUnavailableException("OpenAI devolvió una interpretación inválida.");
         } finally {
             recordCallMetrics("interpret", sample, success);
@@ -193,7 +204,7 @@ public class OpenAiMasterAdapter implements MasterAdapter {
 
             String json = extractOutputText(response);
             if (json == null || json.isBlank()) {
-                log.warn("OpenAI no devolvió una selección utilizable.");
+                LOG.warn("OpenAI no devolvió una selección utilizable.");
                 throw new AiUnavailableException("OpenAI no devolvió una selección utilizable.");
             }
 
@@ -201,10 +212,10 @@ public class OpenAiMasterAdapter implements MasterAdapter {
             success = true;
             return raw.candidateId();
         } catch (RestClientException exception) {
-            log.warn("Fallo al contactar con OpenAI: {}", exception.getMessage());
+            LOG.warn("Fallo al contactar con OpenAI: {}", exception.getMessage());
             throw new AiUnavailableException("No se pudo contactar con OpenAI: " + exception.getMessage());
         } catch (JsonProcessingException exception) {
-            log.warn("OpenAI devolvió una selección inválida: {}", exception.getMessage());
+            LOG.warn("OpenAI devolvió una selección inválida: {}", exception.getMessage());
             throw new AiUnavailableException("OpenAI devolvió una selección inválida.");
         } finally {
             recordCallMetrics("selectCandidate", sample, success);
@@ -297,7 +308,7 @@ public class OpenAiMasterAdapter implements MasterAdapter {
         double estimatedCostUsd = inputTokens * properties.costPerInputTokenUsd() + outputTokens * properties.costPerOutputTokenUsd();
         if (estimatedCostUsd > 0) {
             meterRegistry.counter("pab.rpg.openai.estimated.cost.usd").increment(estimatedCostUsd);
-            log.info("openai_cost_estimate operation={} inputTokens={} outputTokens={} estimatedCostUsd={}",
+            LOG.info("openai_cost_estimate operation={} inputTokens={} outputTokens={} estimatedCostUsd={}",
                     operation, inputTokens, outputTokens, estimatedCostUsd);
         }
     }

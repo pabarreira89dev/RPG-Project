@@ -19,7 +19,7 @@ El proyecto empieza como experiencia individual, dejando margen para una futura 
 ## Stack técnico
 
 - Java 21, Spring Boot 4.1.1, Maven.
-- PostgreSQL + Spring Data JPA/Hibernate, Flyway para migraciones.
+- MySQL + Spring Data JPA/Hibernate, Flyway para migraciones.
 - MapStruct para mapeo DTO ↔ comando/entidad, Lombok.
 - Monolito modular (sin microservicios ni Docker durante el MVP).
 - IA: OpenAI Responses API con Structured Outputs, aislada detrás de la interfaz `MasterAdapter` (la IA solo interpreta texto y narra; nunca decide tiradas, reglas ni estado).
@@ -39,7 +39,7 @@ Para el detalle punto por punto de lo implementado, ver [CONTEXTO_PROYECTO.md](C
 
 ## Ejecución local
 
-Requiere PostgreSQL disponible localmente (o externo). No se usa Docker.
+Requiere MySQL disponible localmente (o externo). No se usa Docker.
 
 ```powershell
 cd "Project GM"

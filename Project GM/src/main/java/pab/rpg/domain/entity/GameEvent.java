@@ -40,7 +40,7 @@ public class GameEvent {
     private UUID actorId;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(nullable = false, columnDefinition = "jsonb")
+    @Column(nullable = false, columnDefinition = "json")
     private Map<String, Object> payload;
 
     @Column(nullable = false)

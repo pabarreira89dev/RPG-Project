@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * Apaga y relanza el proceso local de "Project GM" para que la suite E2E pueda comprobar que
- * el estado persistido en PostgreSQL sobrevive a un reinicio real de la aplicación.
+ * el estado persistido en MySQL sobrevive a un reinicio real de la aplicación.
  * Requiere que /actuator/shutdown esté habilitado (solo ocurre en el perfil "local", ver application-local.yml)
  * y que "mvn" esté disponible en el PATH.
  */

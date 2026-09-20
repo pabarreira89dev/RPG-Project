@@ -19,25 +19,30 @@ UPDATE npc SET strength = 9, agility = 11, intellect = 12, willpower = 10, perce
     WHERE code = 'traveling_merchant';
 
 CREATE TABLE combat (
-    id UUID PRIMARY KEY,
-    session_id UUID NOT NULL REFERENCES game_session (id),
+    id CHAR(36) PRIMARY KEY,
+    session_id CHAR(36) NOT NULL,
     status VARCHAR(20) NOT NULL,
     round_number INT NOT NULL,
     current_turn_order INT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL,
-    ended_at TIMESTAMPTZ,
-    CONSTRAINT chk_combat_status CHECK (status IN ('ACTIVE', 'COMPLETED'))
+    created_at DATETIME NOT NULL,
+    ended_at DATETIME,
+    -- NULL unless the combat is ACTIVE: MySQL unique indexes treat every NULL as distinct,
+    -- so this emulates Postgres' partial unique index (one active combat per session).
+    active_session_id CHAR(36) GENERATED ALWAYS AS (CASE WHEN status = 'ACTIVE' THEN session_id ELSE NULL END) STORED,
+    CONSTRAINT chk_combat_status CHECK (status IN ('ACTIVE', 'COMPLETED')),
+    CONSTRAINT fk_combat_session
+        FOREIGN KEY (session_id)
+        REFERENCES game_session (id)
 );
 
--- Only one active combat per session at a time.
-CREATE UNIQUE INDEX uq_combat_active_session ON combat (session_id) WHERE status = 'ACTIVE';
+CREATE UNIQUE INDEX uq_combat_active_session ON combat (active_session_id);
 
 CREATE TABLE combat_participant (
-    id UUID PRIMARY KEY,
-    combat_id UUID NOT NULL REFERENCES combat (id),
+    id CHAR(36) PRIMARY KEY,
+    combat_id CHAR(36) NOT NULL,
     team VARCHAR(20) NOT NULL,
-    character_id UUID REFERENCES player_character (id),
-    npc_id UUID REFERENCES npc (id),
+    character_id CHAR(36),
+    npc_id CHAR(36),
     name VARCHAR(120) NOT NULL,
     initiative INT NOT NULL,
     turn_order INT NOT NULL,
@@ -50,7 +55,16 @@ CREATE TABLE combat_participant (
     CONSTRAINT chk_combat_participant_source CHECK (
         (character_id IS NOT NULL AND npc_id IS NULL) OR (character_id IS NULL AND npc_id IS NOT NULL)
     ),
-    CONSTRAINT uq_combat_participant_turn_order UNIQUE (combat_id, turn_order)
+    CONSTRAINT uq_combat_participant_turn_order UNIQUE (combat_id, turn_order),
+    CONSTRAINT fk_combat_participant_combat
+        FOREIGN KEY (combat_id)
+        REFERENCES combat (id),
+    CONSTRAINT fk_combat_participant_character
+        FOREIGN KEY (character_id)
+        REFERENCES player_character (id),
+    CONSTRAINT fk_combat_participant_npc
+        FOREIGN KEY (npc_id)
+        REFERENCES npc (id)
 );
 
 CREATE INDEX ix_combat_participant_combat_id ON combat_participant (combat_id);

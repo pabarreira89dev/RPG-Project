@@ -1,13 +1,16 @@
 CREATE TABLE npc (
-    id UUID PRIMARY KEY,
+    id CHAR(36) PRIMARY KEY,
     code VARCHAR(60) NOT NULL,
     name VARCHAR(120) NOT NULL,
-    location_id UUID NOT NULL REFERENCES location (id),
+    location_id CHAR(36) NOT NULL,
     faction VARCHAR(60),
     description VARCHAR(500) NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'ALIVE',
     CONSTRAINT uq_npc_code UNIQUE (code),
-    CONSTRAINT chk_npc_status CHECK (status IN ('ALIVE', 'DEAD'))
+    CONSTRAINT chk_npc_status CHECK (status IN ('ALIVE', 'DEAD')),
+    CONSTRAINT fk_npc_location
+        FOREIGN KEY (location_id)
+        REFERENCES location (id)
 );
 
 INSERT INTO npc (id, code, name, location_id, faction, description, status) VALUES
@@ -23,19 +26,31 @@ INSERT INTO npc (id, code, name, location_id, faction, description, status) VALU
      NULL, 'Pasa por la aldea vendiendo suministros y noticias de otras regiones.', 'ALIVE');
 
 CREATE TABLE relationship (
-    id UUID PRIMARY KEY,
-    session_id UUID NOT NULL REFERENCES game_session (id),
-    npc_id UUID NOT NULL REFERENCES npc (id),
+    id CHAR(36) PRIMARY KEY,
+    session_id CHAR(36) NOT NULL,
+    npc_id CHAR(36) NOT NULL,
     value INT NOT NULL DEFAULT 0,
-    updated_at TIMESTAMPTZ NOT NULL,
-    CONSTRAINT uq_relationship_session_npc UNIQUE (session_id, npc_id)
+    updated_at DATETIME NOT NULL,
+    CONSTRAINT uq_relationship_session_npc UNIQUE (session_id, npc_id),
+    CONSTRAINT fk_relationship_session
+        FOREIGN KEY (session_id)
+        REFERENCES game_session (id),
+    CONSTRAINT fk_relationship_npc
+        FOREIGN KEY (npc_id)
+        REFERENCES npc (id)
 );
 
 CREATE TABLE npc_knowledge_fact (
-    id UUID PRIMARY KEY,
-    session_id UUID NOT NULL REFERENCES game_session (id),
-    npc_id UUID NOT NULL REFERENCES npc (id),
+    id CHAR(36) PRIMARY KEY,
+    session_id CHAR(36) NOT NULL,
+    npc_id CHAR(36) NOT NULL,
     fact_key VARCHAR(100) NOT NULL,
-    learned_at TIMESTAMPTZ NOT NULL,
-    CONSTRAINT uq_npc_knowledge_fact UNIQUE (session_id, npc_id, fact_key)
+    learned_at DATETIME NOT NULL,
+    CONSTRAINT uq_npc_knowledge_fact UNIQUE (session_id, npc_id, fact_key),
+    CONSTRAINT fk_npc_knowledge_fact_session
+        FOREIGN KEY (session_id)
+        REFERENCES game_session (id),
+    CONSTRAINT fk_npc_knowledge_fact_npc
+        FOREIGN KEY (npc_id)
+        REFERENCES npc (id)
 );

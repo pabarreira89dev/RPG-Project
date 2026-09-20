@@ -1,5 +1,5 @@
 CREATE TABLE quest (
-    id UUID PRIMARY KEY,
+    id CHAR(36) PRIMARY KEY,
     code VARCHAR(60) NOT NULL,
     title VARCHAR(120) NOT NULL,
     description VARCHAR(500) NOT NULL,
@@ -7,34 +7,55 @@ CREATE TABLE quest (
 );
 
 CREATE TABLE quest_stage (
-    id UUID PRIMARY KEY,
-    quest_id UUID NOT NULL REFERENCES quest (id),
+    id CHAR(36) PRIMARY KEY,
+    quest_id CHAR(36) NOT NULL,
     code VARCHAR(60) NOT NULL,
     description VARCHAR(500) NOT NULL,
     is_initial BOOLEAN NOT NULL DEFAULT FALSE,
     is_terminal BOOLEAN NOT NULL DEFAULT FALSE,
-    CONSTRAINT uq_quest_stage_code UNIQUE (quest_id, code)
+    CONSTRAINT uq_quest_stage_code UNIQUE (quest_id, code),
+    CONSTRAINT fk_quest_stage_quest
+        FOREIGN KEY (quest_id)
+        REFERENCES quest (id)
 );
 
 CREATE TABLE quest_stage_transition (
-    id UUID PRIMARY KEY,
-    quest_id UUID NOT NULL REFERENCES quest (id),
-    from_stage_id UUID NOT NULL REFERENCES quest_stage (id),
-    to_stage_id UUID NOT NULL REFERENCES quest_stage (id),
+    id CHAR(36) PRIMARY KEY,
+    quest_id CHAR(36) NOT NULL,
+    from_stage_id CHAR(36) NOT NULL,
+    to_stage_id CHAR(36) NOT NULL,
     choice_key VARCHAR(60) NOT NULL,
-    CONSTRAINT uq_quest_stage_transition UNIQUE (quest_id, from_stage_id, choice_key)
+    CONSTRAINT uq_quest_stage_transition UNIQUE (quest_id, from_stage_id, choice_key),
+    CONSTRAINT fk_quest_stage_transition_quest
+        FOREIGN KEY (quest_id)
+        REFERENCES quest (id),
+    CONSTRAINT fk_quest_stage_transition_from
+        FOREIGN KEY (from_stage_id)
+        REFERENCES quest_stage (id),
+    CONSTRAINT fk_quest_stage_transition_to
+        FOREIGN KEY (to_stage_id)
+        REFERENCES quest_stage (id)
 );
 
 CREATE TABLE quest_state (
-    id UUID PRIMARY KEY,
-    session_id UUID NOT NULL REFERENCES game_session (id),
-    quest_id UUID NOT NULL REFERENCES quest (id),
-    current_stage_id UUID NOT NULL REFERENCES quest_stage (id),
+    id CHAR(36) PRIMARY KEY,
+    session_id CHAR(36) NOT NULL,
+    quest_id CHAR(36) NOT NULL,
+    current_stage_id CHAR(36) NOT NULL,
     status VARCHAR(20) NOT NULL,
-    started_at TIMESTAMPTZ NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL,
+    started_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
     CONSTRAINT uq_quest_state_session_quest UNIQUE (session_id, quest_id),
-    CONSTRAINT chk_quest_state_status CHECK (status IN ('ACTIVE', 'COMPLETED'))
+    CONSTRAINT chk_quest_state_status CHECK (status IN ('ACTIVE', 'COMPLETED')),
+    CONSTRAINT fk_quest_state_session
+        FOREIGN KEY (session_id)
+        REFERENCES game_session (id),
+    CONSTRAINT fk_quest_state_quest
+        FOREIGN KEY (quest_id)
+        REFERENCES quest (id),
+    CONSTRAINT fk_quest_state_current_stage
+        FOREIGN KEY (current_stage_id)
+        REFERENCES quest_stage (id)
 );
 
 -- Quest 1: Aron's debt (tied to the aron_tavernkeeper NPC), branches into paying it off or confronting the creditor.

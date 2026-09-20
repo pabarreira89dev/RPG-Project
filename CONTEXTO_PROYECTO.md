@@ -44,15 +44,15 @@ Fuera del MVP v0.2 quedan economía dinámica, magia compleja, múltiples faccio
 - Maven.
 - Monolito modular, no microservicios durante el MVP.
 - REST/JSON sobre HTTPS.
-- PostgreSQL.
+- MySQL.
 - Spring Data JPA/Hibernate.
 - Flyway 13.7.0 para migraciones.
 - MapStruct 1.6.3 para mapeo entre DTOs y comandos/entidades.
 - IDs UUID.
 - Fechas con `Instant` en UTC.
-- Eventos append-only en PostgreSQL.
+- Eventos append-only en MySQL.
 - Optimistic locking mediante versión del agregado.
-- Ejecución local con Maven y PostgreSQL instalado o externo.
+- Ejecución local con Maven y MySQL instalado o externo.
 - No usar Docker ni Docker Compose por ahora.
 - El proveedor de despliegue cloud queda sin decidir.
 
@@ -88,9 +88,9 @@ DATABASE_PASSWORD
 En `Project GM/src/main/resources` existen:
 
 - `application.yml`: configuración común y perfil por defecto `local`.
-- `application-local.yml`: PostgreSQL local/externo (host/BD fijos vía `DATABASE_URL`, usuario/contraseña vía `DATABASE_USERNAME`/`DATABASE_PASSWORD`, todas con default `admin`/`admin`/`jdbc:postgresql://localhost:5432/project_gm` para desarrollo), logs detallados, OpenAI real activado por defecto (requiere `OPENAI_API_KEY`/`OPENAI_MODEL` como variables de entorno, sin default; se puede desactivar con `OPENAI_ENABLED=false` para volver al stub) y usuario de desarrollo. Los valores locales actuales de estas variables se guardan en `Project GM/.env.local` (gitignored, ver sección "Estado de la sesión").
+- `application-local.yml`: MySQL local/externo (host/BD fijos vía `DATABASE_URL`, usuario/contraseña vía `DATABASE_USERNAME`/`DATABASE_PASSWORD`, todas con default `admin`/`admin`/`jdbc:mysql://localhost:3306/project_gm` para desarrollo), logs detallados, OpenAI real activado por defecto (requiere `OPENAI_API_KEY`/`OPENAI_MODEL` como variables de entorno, sin default; se puede desactivar con `OPENAI_ENABLED=false` para volver al stub) y usuario de desarrollo. Los valores locales actuales de estas variables se guardan en `Project GM/.env.local` (gitignored, ver sección "Estado de la sesión").
 - `application-test.yml`: base de datos de pruebas, OpenAI desactivado (stub, para que los tests sean deterministas y no dependan de red/credenciales).
-- `application-cloud.yml`: PostgreSQL y OpenAI configurados mediante variables de entorno, seguridad de desarrollo desactivada.
+- `application-cloud.yml`: MySQL y OpenAI configurados mediante variables de entorno, seguridad de desarrollo desactivada.
 
 El perfil anterior `prod` fue sustituido por `cloud`.
 
@@ -102,7 +102,7 @@ El proyecto Spring Boot está en:
 
 Configuración inicial existente:
 
-- `pom.xml` con Spring Boot 4.1.1, Java 21, Web, JPA, PostgreSQL 42.7.13, Flyway 13.7.0, MapStruct 1.6.3, Lombok y tests.
+- `pom.xml` con Spring Boot 4.1.1, Java 21, Web, JPA, MySQL Connector/J, Flyway 13.7.0, MapStruct 1.6.3, Lombok y tests.
 - Clase principal `pab.rpg.Application`.
 - Test inicial de contexto.
 - Configuración YAML por perfiles.
@@ -173,8 +173,8 @@ Existe un test unitario `CreateSessionRequestMapperTest` que verifica el mapeo d
 
 La migración `Project GM/src/main/resources/db/migration/V2__create_game_event_and_processed_action.sql` añade:
 
-- `game_event`: tabla append-only con `session_id`, `sequence` (único por sesión), `type`, `actor_id`, `payload` JSONB, `world_time` y `created_at`.
-- `processed_action`: tabla de idempotencia con `session_id`, `idempotency_key` (único por sesión), `action_id` y `response_payload` JSONB.
+- `game_event`: tabla append-only con `session_id`, `sequence` (único por sesión), `type`, `actor_id`, `payload` JSON, `world_time` y `created_at`.
+- `processed_action`: tabla de idempotencia con `session_id`, `idempotency_key` (único por sesión), `action_id` y `response_payload` JSON.
 
 Entidades nuevas en `domain.entity`: `GameEvent` y `ProcessedAction`, con el mismo estilo Lombok/JPA que `GameSession` y `Character`. El campo JSON se mapea como `Map<String, Object>` con `@JdbcTypeCode(SqlTypes.JSON)` para evitar problemas de doble serialización.
 

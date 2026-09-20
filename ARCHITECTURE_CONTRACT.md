@@ -42,11 +42,11 @@ La implementación inicial debe utilizar:
 * Java 21
 * Spring Boot 4
 * API de OpenAI para el LLM
-* PostgreSQL (Spring Data JPA/Hibernate + Flyway) para persistencia
+* MySQL (Spring Data JPA/Hibernate + Flyway) para persistencia
 * JUnit para tests
 * Arquitectura preparada para evolución a multiplayer
 
-El dominio debe ser independiente de OpenAI y de PostgreSQL.
+El dominio debe ser independiente de OpenAI y de MySQL.
 
 No introducir dependencias de infraestructura dentro de `domain`.
 
@@ -485,7 +485,7 @@ public record ActionContext(
 
 El contexto debe contener toda la información necesaria para resolver la acción.
 
-Las reglas no deben realizar llamadas repetitivas a PostgreSQL.
+Las reglas no deben realizar llamadas repetitivas a MySQL.
 
 ---
 
@@ -1061,7 +1061,7 @@ OpenAI genera la narración.
 
 # 29. Persistencia
 
-Utilizar PostgreSQL (Spring Data JPA/Hibernate + Flyway) inicialmente.
+Utilizar MySQL (Spring Data JPA/Hibernate + Flyway) inicialmente.
 
 Separar conceptualmente:
 
@@ -1075,7 +1075,7 @@ Relationship
 Event
 ```
 
-El dominio no debe depender directamente de PostgreSQL/JPA.
+El dominio no debe depender directamente de MySQL/JPA.
 
 Utilizar interfaces:
 
@@ -1412,7 +1412,7 @@ Todas las mutaciones pasan por el Game Engine.
 
 ### 8. El dominio no depende de infraestructura externa
 
-OpenAI y PostgreSQL pertenecen a `infrastructure`.
+OpenAI y MySQL pertenecen a `infrastructure`.
 
 ### 9. El motor debe funcionar sin IA
 
@@ -1445,8 +1445,8 @@ Cuando se revise una implementación de Project GM, comprobar:
 [ ] ¿Las acciones emergentes pasan por validación?
 [ ] ¿Se comprueban referencias inexistentes?
 [ ] ¿Se controla el conocimiento visible para el jugador?
-[ ] ¿El dominio es independiente de OpenAI y PostgreSQL?
-[ ] ¿PostgreSQL está aislado en infrastructure?
+[ ] ¿El dominio es independiente de OpenAI y MySQL?
+[ ] ¿MySQL está aislado en infrastructure?
 [ ] ¿El engine puede ejecutarse sin OpenAI?
 [ ] ¿Existen tests de las reglas?
 [ ] ¿El resultado de una acción depende del estado real?

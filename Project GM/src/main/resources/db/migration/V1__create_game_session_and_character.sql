@@ -1,5 +1,5 @@
 CREATE TABLE player_character (
-    id UUID PRIMARY KEY,
+    id CHAR(36) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     level INTEGER NOT NULL,
     experience INTEGER NOT NULL,
@@ -15,14 +15,14 @@ CREATE TABLE player_character (
 );
 
 CREATE TABLE game_session (
-    id UUID PRIMARY KEY,
-    player_id UUID NOT NULL,
-    world_id UUID NOT NULL,
-    current_location_id UUID,
+    id CHAR(36) PRIMARY KEY,
+    player_id CHAR(36) NOT NULL,
+    world_id CHAR(36) NOT NULL,
+    current_location_id CHAR(36),
     status VARCHAR(30) NOT NULL,
-    world_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    world_time DATETIME NOT NULL,
     version BIGINT NOT NULL DEFAULT 0,
-    character_id UUID NOT NULL UNIQUE,
+    character_id CHAR(36) NOT NULL UNIQUE,
     CONSTRAINT fk_game_session_character
         FOREIGN KEY (character_id)
         REFERENCES player_character (id),

@@ -13,6 +13,10 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+        # MySQL has no native UUID type; force CHAR(36) instead of Hibernate's BINARY(16) default
+        # to match the Flyway-managed schema (CHAR(36) columns).
+        type:
+          preferred_uuid_jdbc_type: CHAR
 
   flyway:
     enabled: true

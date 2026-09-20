@@ -2,10 +2,10 @@ spring:
   profiles:
     on-profile: local
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/project_gm}
+    url: ${DATABASE_URL:jdbc:mysql://localhost:3306/project_gm?useSSL=false&serverTimezone=UTC}
     username: ${DATABASE_USERNAME:admin}
     password: ${DATABASE_PASSWORD:admin}
-    driver-class-name: org.postgresql.Driver
+    driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     show-sql: true

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pab.rpg.api.dto.SubmitActionCommand;
@@ -30,6 +32,8 @@ import java.util.*;
 @Transactional
 public class ActionServiceImpl implements ActionService {
 
+    private static final Logger LOG = LoggerFactory.getLogger(ActionServiceImpl.class);
+
     private static final Duration ACTION_DURATION = Duration.ofMinutes(10);
     private static final int MAX_TEXT_LENGTH = 2000;
 
@@ -49,6 +53,12 @@ public class ActionServiceImpl implements ActionService {
     public ActionResponse submitAction(SubmitActionCommand command) {
         validate(command);
 
+        LOG.info("Submitting action for sessionId={} playerId={} idempotencyKey={}",
+                command.sessionId(),
+                command.playerId(),
+                command.idempotencyKey()
+        );
+
         Timer.Sample sample = Timer.start(meterRegistry);
         boolean success = false;
         try {
@@ -66,10 +76,19 @@ public class ActionServiceImpl implements ActionService {
         Optional<IdempotencyService.StoredActionResult> existing =
                 idempotencyService.findExisting(command.sessionId(), command.idempotencyKey());
         if (existing.isPresent()) {
+            LOG.info("Found existing processed action for sessionId={} idempotencyKey={}",
+                    command.sessionId(),
+                    command.idempotencyKey());
             return objectMapper.convertValue(existing.get().responsePayload(), ActionResponse.class);
         }
 
         if (session.getVersion() != command.expectedVersion()) {
+            LOG.error("Stale session version for sessionId={} playerId={}: expected={}, actual={}",
+                    command.sessionId(),
+                    command.playerId(),
+                    command.expectedVersion(),
+                    session.getVersion()
+            );
             throw new StaleSessionVersionException(command.sessionId(), command.expectedVersion(), session.getVersion());
         }
 

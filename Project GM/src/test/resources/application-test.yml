@@ -2,10 +2,10 @@ spring:
   profiles:
     on-profile: test
   datasource:
-    url: ${TEST_DATABASE_URL:jdbc:postgresql://localhost:5432/project_gm_test}
-    username: admin_test
-    password: admin_test
-    driver-class-name: org.postgresql.Driver
+    url: ${TEST_DATABASE_URL:jdbc:mysql://localhost:3306/project_gm_test?useSSL=false&serverTimezone=UTC}
+    username: project_gm_user
+    password: project_gm_pass
+    driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     show-sql: false

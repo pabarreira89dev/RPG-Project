@@ -2,6 +2,8 @@ package pab.rpg.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pab.rpg.domain.entity.ProcessedAction;
@@ -19,6 +21,8 @@ import java.util.UUID;
 @Transactional
 public class IdempotencyServiceImpl implements IdempotencyService {
 
+    private static final Logger LOG = LoggerFactory.getLogger(IdempotencyServiceImpl.class);
+
     private final ProcessedActionRepository processedActionRepository;
     private final ObjectMapper objectMapper;
 
@@ -27,6 +31,8 @@ public class IdempotencyServiceImpl implements IdempotencyService {
     public Optional<StoredActionResult> findExisting(UUID sessionId, UUID idempotencyKey) {
         Objects.requireNonNull(sessionId, "sessionId must not be null");
         Objects.requireNonNull(idempotencyKey, "idempotencyKey must not be null");
+
+        LOG.info("Retrieving processed action for sessionId={} and idempotencyKey={}", sessionId, idempotencyKey);
 
         return processedActionRepository.findBySessionIdAndIdempotencyKey(sessionId, idempotencyKey)
                 .map(action -> new StoredActionResult(action.getActionId(), action.getResponsePayload()));
@@ -48,6 +54,7 @@ public class IdempotencyServiceImpl implements IdempotencyService {
                 Instant.now()
         );
 
+        LOG.info("Recording processed action for sessionId={} and idempotencyKey={}", sessionId, idempotencyKey);
         processedActionRepository.save(action);
     }
 
