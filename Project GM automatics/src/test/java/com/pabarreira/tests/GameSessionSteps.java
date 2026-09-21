@@ -240,6 +240,7 @@ public class GameSessionSteps {
     }
 
     @Given("el jugador ha iniciado combate contra {string}")
+    @When("el jugador inicia combate contra {string}")
     public void el_jugador_ha_iniciado_combate_contra(String npcCode) {
         RestAssured.baseURI = ApiConfig.BASE_URI;
 
@@ -252,7 +253,19 @@ public class GameSessionSteps {
                 .when()
                 .post("/api/v1/sessions/{sessionId}/combat/start", lastSessionId.toString());
 
-        lastCombatId = UUID.fromString(response.jsonPath().getString("combatId"));
+        if (response.statusCode() == 200) {
+            lastCombatId = UUID.fromString(response.jsonPath().getString("combatId"));
+        }
+    }
+
+    @When("el jugador consulta el combate activo")
+    public void el_jugador_consulta_el_combate_activo() {
+        RestAssured.baseURI = ApiConfig.BASE_URI;
+
+        response = given()
+                .header("X-Dev-Player-Id", playerId.toString())
+                .when()
+                .get("/api/v1/sessions/{sessionId}/combat", lastSessionId.toString());
     }
 
     @When("el jugador ataca hasta terminar el combate")
@@ -321,6 +334,7 @@ public class GameSessionSteps {
     }
 
     @Given("el jugador ha iniciado la misión {string}")
+    @When("el jugador inicia la misión {string}")
     public void el_jugador_ha_iniciado_la_mision(String questCode) {
         RestAssured.baseURI = ApiConfig.BASE_URI;
 
@@ -328,6 +342,21 @@ public class GameSessionSteps {
                 .header("X-Dev-Player-Id", playerId.toString())
                 .when()
                 .post("/api/v1/sessions/{sessionId}/quests/{questCode}/start", lastSessionId.toString(), questCode);
+    }
+
+    @When("el jugador consulta las misiones visibles")
+    public void el_jugador_consulta_las_misiones_visibles() {
+        RestAssured.baseURI = ApiConfig.BASE_URI;
+
+        response = given()
+                .header("X-Dev-Player-Id", playerId.toString())
+                .when()
+                .get("/api/v1/sessions/{sessionId}/quests", lastSessionId.toString());
+    }
+
+    @Then("la lista de misiones visibles contiene {int} misiones")
+    public void la_lista_de_misiones_visibles_contiene_misiones(int expectedSize) {
+        response.then().body("$", hasSize(expectedSize));
     }
 
     @When("el jugador avanza la misión {string} con la decisión {string}")
@@ -361,6 +390,26 @@ public class GameSessionSteps {
                 .orElseThrow(() -> new IllegalStateException("La misión '" + questCode + "' no aparece entre las misiones visibles."));
 
         assertThat(actualStatus, equalTo(expectedStatus));
+    }
+
+    @When("el jugador consulta los NPCs de la localización actual")
+    public void el_jugador_consulta_los_npcs_de_la_localizacion_actual() {
+        RestAssured.baseURI = ApiConfig.BASE_URI;
+
+        response = given()
+                .header("X-Dev-Player-Id", playerId.toString())
+                .when()
+                .get("/api/v1/sessions/{sessionId}/npcs", lastSessionId.toString());
+    }
+
+    @Then("la lista de NPCs contiene {string}")
+    public void la_lista_de_npcs_contiene(String expectedCode) {
+        response.then().body("code", hasItem(expectedCode));
+    }
+
+    @Then("la relación con {string} es {int}")
+    public void la_relacion_con_es(String npcCode, int expectedValue) {
+        assertThat(consultarRelacion(npcCode), equalTo(expectedValue));
     }
 
     @When("el jugador anota la relación actual con {string}")
@@ -399,5 +448,51 @@ public class GameSessionSteps {
     @When("el jugador consulta su sesión de nuevo")
     public void el_jugador_consulta_su_sesion_de_nuevo() {
         consultarSesion(lastSessionId, playerId);
+    }
+
+    @When("el jugador crea una sesión sin indicar identidad en la localización {string}")
+    public void el_jugador_crea_una_sesion_sin_indicar_identidad_en_la_localizacion(String locationCode) {
+        RestAssured.baseURI = ApiConfig.BASE_URI;
+
+        Map<String, Object> body = Map.of(
+                "worldId", UUID.randomUUID().toString(),
+                "currentLocationId", LocationCatalog.idOf(locationCode).toString(),
+                "worldTime", "2026-01-01T00:00:00Z",
+                "characterName", characterName,
+                "characterLevel", characterLevel,
+                "characterExperience", 0,
+                "attributes", Map.of(
+                        "strength", 5,
+                        "agility", 5,
+                        "intellect", 5,
+                        "willpower", 5,
+                        "perception", 5,
+                        "presence", 5
+                ),
+                "health", Map.of(
+                        "maximum", 20,
+                        "current", 20,
+                        "wounds", 0
+                )
+        );
+
+        response = given()
+                .contentType("application/json")
+                .body(body)
+                .when()
+                .post("/api/v1/sessions");
+
+        if (response.statusCode() == 201) {
+            lastSessionId = UUID.fromString(response.jsonPath().getString("sessionId"));
+        }
+    }
+
+    @When("el jugador consulta esa sesión sin indicar identidad")
+    public void el_jugador_consulta_esa_sesion_sin_indicar_identidad() {
+        RestAssured.baseURI = ApiConfig.BASE_URI;
+
+        response = given()
+                .when()
+                .get("/api/v1/sessions/{sessionId}", lastSessionId.toString());
     }
 }
