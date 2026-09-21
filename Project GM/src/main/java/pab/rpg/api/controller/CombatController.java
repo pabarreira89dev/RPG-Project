@@ -6,12 +6,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import pab.rpg.api.dto.request.PerformAttackRequest;
 import pab.rpg.api.dto.request.StartCombatRequest;
 import pab.rpg.api.dto.response.CombatResponse;
 import pab.rpg.exception.CombatNotFoundException;
+import pab.rpg.security.CurrentPlayer;
 import pab.rpg.service.CombatService;
 import pab.rpg.service.GameSessionService;
 
@@ -28,7 +28,7 @@ public class CombatController {
     @GetMapping
     public CombatResponse getActiveCombat(
             @PathVariable UUID sessionId,
-            @RequestParam UUID playerId
+            @CurrentPlayer UUID playerId
     ) {
         gameSessionService.getSession(sessionId, playerId);
 
@@ -40,7 +40,7 @@ public class CombatController {
     @PostMapping("/start")
     public CombatResponse startCombat(
             @PathVariable UUID sessionId,
-            @RequestParam UUID playerId,
+            @CurrentPlayer UUID playerId,
             @RequestBody StartCombatRequest request
     ) {
         gameSessionService.getSession(sessionId, playerId);
@@ -52,7 +52,7 @@ public class CombatController {
     public CombatResponse performAttack(
             @PathVariable UUID sessionId,
             @PathVariable UUID combatId,
-            @RequestParam UUID playerId,
+            @CurrentPlayer UUID playerId,
             @RequestBody PerformAttackRequest request
     ) {
         gameSessionService.getSession(sessionId, playerId);

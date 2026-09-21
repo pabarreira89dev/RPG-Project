@@ -6,10 +6,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import pab.rpg.api.dto.request.AdvanceQuestRequest;
 import pab.rpg.api.dto.response.QuestStateResponse;
+import pab.rpg.security.CurrentPlayer;
 import pab.rpg.service.GameSessionService;
 import pab.rpg.service.QuestService;
 
@@ -27,7 +27,7 @@ public class QuestController {
     @GetMapping
     public List<QuestStateResponse> getVisibleQuests(
             @PathVariable UUID sessionId,
-            @RequestParam UUID playerId
+            @CurrentPlayer UUID playerId
     ) {
         gameSessionService.getSession(sessionId, playerId);
 
@@ -40,7 +40,7 @@ public class QuestController {
     public QuestStateResponse startQuest(
             @PathVariable UUID sessionId,
             @PathVariable String questCode,
-            @RequestParam UUID playerId
+            @CurrentPlayer UUID playerId
     ) {
         gameSessionService.getSession(sessionId, playerId);
 
@@ -51,7 +51,7 @@ public class QuestController {
     public QuestStateResponse advanceQuest(
             @PathVariable UUID sessionId,
             @PathVariable String questCode,
-            @RequestParam UUID playerId,
+            @CurrentPlayer UUID playerId,
             @RequestBody AdvanceQuestRequest request
     ) {
         gameSessionService.getSession(sessionId, playerId);

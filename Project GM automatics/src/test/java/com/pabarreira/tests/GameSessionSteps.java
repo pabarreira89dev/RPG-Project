@@ -100,7 +100,7 @@ public class GameSessionSteps {
         RestAssured.baseURI = ApiConfig.BASE_URI;
 
         response = given()
-                .queryParam("playerId", playerId.toString())
+                .header("X-Dev-Player-Id", playerId.toString())
                 .when()
                 .get("/api/v1/sessions");
     }
@@ -187,7 +187,7 @@ public class GameSessionSteps {
 
         response = given()
                 .contentType("application/json")
-                .queryParam("playerId", playerId.toString())
+                .header("X-Dev-Player-Id", playerId.toString())
                 .body(body)
                 .when()
                 .post("/api/v1/sessions/{sessionId}/actions", lastSessionId.toString());
@@ -197,7 +197,6 @@ public class GameSessionSteps {
         RestAssured.baseURI = ApiConfig.BASE_URI;
 
         Map<String, Object> body = Map.of(
-                "playerId", playerId.toString(),
                 "worldId", UUID.randomUUID().toString(),
                 "currentLocationId", LocationCatalog.idOf(locationCode).toString(),
                 "worldTime", "2026-01-01T00:00:00Z",
@@ -221,6 +220,7 @@ public class GameSessionSteps {
 
         response = given()
                 .contentType("application/json")
+                .header("X-Dev-Player-Id", playerId.toString())
                 .body(body)
                 .when()
                 .post("/api/v1/sessions");
@@ -234,7 +234,7 @@ public class GameSessionSteps {
         RestAssured.baseURI = ApiConfig.BASE_URI;
 
         response = given()
-                .queryParam("playerId", asPlayerId.toString())
+                .header("X-Dev-Player-Id", asPlayerId.toString())
                 .when()
                 .get("/api/v1/sessions/{sessionId}", sessionId.toString());
     }
@@ -247,7 +247,7 @@ public class GameSessionSteps {
 
         response = given()
                 .contentType("application/json")
-                .queryParam("playerId", playerId.toString())
+                .header("X-Dev-Player-Id", playerId.toString())
                 .body(body)
                 .when()
                 .post("/api/v1/sessions/{sessionId}/combat/start", lastSessionId.toString());
@@ -314,7 +314,7 @@ public class GameSessionSteps {
 
         response = given()
                 .contentType("application/json")
-                .queryParam("playerId", playerId.toString())
+                .header("X-Dev-Player-Id", playerId.toString())
                 .body(body)
                 .when()
                 .post("/api/v1/sessions/{sessionId}/combat/{combatId}/attack", lastSessionId.toString(), lastCombatId.toString());
@@ -325,7 +325,7 @@ public class GameSessionSteps {
         RestAssured.baseURI = ApiConfig.BASE_URI;
 
         response = given()
-                .queryParam("playerId", playerId.toString())
+                .header("X-Dev-Player-Id", playerId.toString())
                 .when()
                 .post("/api/v1/sessions/{sessionId}/quests/{questCode}/start", lastSessionId.toString(), questCode);
     }
@@ -338,7 +338,7 @@ public class GameSessionSteps {
 
         response = given()
                 .contentType("application/json")
-                .queryParam("playerId", playerId.toString())
+                .header("X-Dev-Player-Id", playerId.toString())
                 .body(body)
                 .when()
                 .post("/api/v1/sessions/{sessionId}/quests/{questCode}/advance", lastSessionId.toString(), questCode);
@@ -349,7 +349,7 @@ public class GameSessionSteps {
         RestAssured.baseURI = ApiConfig.BASE_URI;
 
         Response quests = given()
-                .queryParam("playerId", playerId.toString())
+                .header("X-Dev-Player-Id", playerId.toString())
                 .when()
                 .get("/api/v1/sessions/{sessionId}/quests", lastSessionId.toString());
 
@@ -379,7 +379,7 @@ public class GameSessionSteps {
         RestAssured.baseURI = ApiConfig.BASE_URI;
 
         Response npcs = given()
-                .queryParam("playerId", playerId.toString())
+                .header("X-Dev-Player-Id", playerId.toString())
                 .when()
                 .get("/api/v1/sessions/{sessionId}/npcs", lastSessionId.toString());
 

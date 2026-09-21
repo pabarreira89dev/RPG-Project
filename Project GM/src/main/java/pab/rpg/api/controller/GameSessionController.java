@@ -7,12 +7,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import pab.rpg.api.dto.request.CreateSessionRequest;
 import pab.rpg.api.mapper.CreateSessionRequestMapper;
 import pab.rpg.api.dto.response.GameSessionResponse;
 import pab.rpg.domain.entity.GameSession;
+import pab.rpg.security.CurrentPlayer;
 import pab.rpg.service.GameSessionService;
 
 import java.net.URI;
@@ -28,8 +28,11 @@ public class GameSessionController {
     private final CreateSessionRequestMapper createSessionRequestMapper;
 
     @PostMapping
-    public ResponseEntity<GameSessionResponse> createSession(@RequestBody CreateSessionRequest request) {
-        GameSession session = gameSessionService.createSession(createSessionRequestMapper.toCommand(request));
+    public ResponseEntity<GameSessionResponse> createSession(
+            @RequestBody CreateSessionRequest request,
+            @CurrentPlayer UUID playerId
+    ) {
+        GameSession session = gameSessionService.createSession(createSessionRequestMapper.toCommand(request, playerId));
         GameSessionResponse response = GameSessionResponse.from(session);
 
         return ResponseEntity
@@ -40,13 +43,13 @@ public class GameSessionController {
     @GetMapping("/{sessionId}")
     public GameSessionResponse getSession(
             @PathVariable UUID sessionId,
-            @RequestParam UUID playerId
+            @CurrentPlayer UUID playerId
     ) {
         return GameSessionResponse.from(gameSessionService.getSession(sessionId, playerId));
     }
 
     @GetMapping
-    public List<GameSessionResponse> getSessions(@RequestParam UUID playerId) {
+    public List<GameSessionResponse> getSessions(@CurrentPlayer UUID playerId) {
         return gameSessionService.getSessions(playerId).stream()
                 .map(GameSessionResponse::from)
                 .toList();

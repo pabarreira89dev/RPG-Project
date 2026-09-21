@@ -26,7 +26,6 @@ class CreateSessionRequestMapperTest {
         AttributeSet attributes = new AttributeSet(10, 11, 12, 13, 14, 15);
         HealthState health = new HealthState(100, 80, 2);
         CreateSessionRequest request = new CreateSessionRequest(
-                playerId,
                 worldId,
                 currentLocationId,
                 worldTime,
@@ -37,7 +36,7 @@ class CreateSessionRequestMapperTest {
                 health
         );
 
-        CreateGameSessionCommand command = mapper.toCommand(request);
+        CreateGameSessionCommand command = mapper.toCommand(request, playerId);
 
         assertEquals(playerId, command.playerId());
         assertEquals(worldId, command.worldId());

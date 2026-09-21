@@ -5,11 +5,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import pab.rpg.api.dto.SubmitActionCommand;
 import pab.rpg.api.dto.request.SubmitActionRequest;
 import pab.rpg.api.dto.response.ActionResponse;
+import pab.rpg.security.CurrentPlayer;
 import pab.rpg.service.ActionService;
 
 import java.util.UUID;
@@ -24,7 +24,7 @@ public class ActionController {
     @PostMapping
     public ActionResponse submitAction(
             @PathVariable UUID sessionId,
-            @RequestParam UUID playerId,
+            @CurrentPlayer UUID playerId,
             @RequestBody SubmitActionRequest request
     ) {
         SubmitActionCommand command = new SubmitActionCommand(

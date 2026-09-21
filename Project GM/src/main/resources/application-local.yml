@@ -38,5 +38,7 @@ management:
     shutdown:
       enabled: true
 
+# Solo válido con security.development-user-enabled=true: identidad fija de desarrollo, nunca en cloud.
 security:
   development-user-enabled: true
+  development-player-id: 00000000-0000-0000-0000-000000000001

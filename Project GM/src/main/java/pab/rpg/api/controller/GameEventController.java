@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import pab.rpg.api.dto.response.GameEventResponse;
+import pab.rpg.security.CurrentPlayer;
 import pab.rpg.service.GameEventService;
 import pab.rpg.service.GameSessionService;
 
@@ -25,7 +26,7 @@ public class GameEventController {
     @GetMapping
     public List<GameEventResponse> getEvents(
             @PathVariable UUID sessionId,
-            @RequestParam UUID playerId,
+            @CurrentPlayer UUID playerId,
             @RequestParam(defaultValue = "0") long after
     ) {
         gameSessionService.getSession(sessionId, playerId);

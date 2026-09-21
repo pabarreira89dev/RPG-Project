@@ -32,3 +32,7 @@ management:
     web:
       exposure:
         include: health,info,metrics
+
+# Secure by default; each profile below opts explicitly into the local/test dev identity bypass.
+security:
+  development-user-enabled: false

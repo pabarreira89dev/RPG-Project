@@ -78,6 +78,8 @@ OPENAI_BASE_URL
 OPENAI_MODEL
 OPENAI_MAX_OUTPUT_TOKENS
 OPENAI_TEMPERATURE
+JWT_ISSUER_URI
+JWT_AUDIENCE
 DATABASE_URL
 DATABASE_USERNAME
 DATABASE_PASSWORD
@@ -421,6 +423,27 @@ Sin cambios en `StubMasterAdapter` (no llama a red, no genera coste real). Tests
 
 Pendiente dentro de observabilidad (no implementado, fuera de alcance mínimo del TDD §14): dashboards/backend externo de métricas y logs (el TDD deja el backend sin decidir), rate limiting/cuotas por usuario (eso es más bien seguridad/límites, ver `MVP v0.3.md`).
 
+### Punto 12 implementado: seguridad JWT
+
+Nuevo paquete `pab.rpg.security` (no `infrastructure/security` como en el árbol idealizado del TDD, mismo criterio de "compatible, no exacto" ya aplicado a otros puntos): `SecurityConfig` (`@EnableWebSecurity`, define el único `SecurityFilterChain` de la app), `SecurityProperties` (`@ConfigurationProperties(prefix="security")`, registrada por el `@ConfigurationPropertiesScan` ya existente en `Application`), `DevelopmentIdentityFilter`, `CurrentPlayer` (anotación de parámetro) + `CurrentPlayerArgumentResolver` + `CurrentPlayerWebConfig` (registra el resolver como `WebMvcConfigurer`).
+
+`playerId` ya NO se acepta en el body ni en query params de ningún endpoint (se quitó de `CreateSessionRequest` y de todos los `@RequestParam` de los controladores); ahora sale siempre de la identidad autenticada mediante `@CurrentPlayer UUID playerId` en la firma del método del controlador (`CurrentPlayerArgumentResolver` lee `SecurityContextHolder`). `CreateSessionRequestMapper.toCommand` gana un segundo parámetro `UUID playerId` (MapStruct lo mapea al campo `playerId` del comando junto al resto de campos del request).
+
+Dos modos seleccionados por `security.development-user-enabled` (booleano ya esbozado en los YAML por el usuario antes de esta sesión, ahora con implementación real):
+
+- `false` (obligatorio en `cloud`/producción): `SecurityConfig` configura `oauth2ResourceServer().jwt()` con un `JwtDecoder` construido a mano (`NimbusJwtDecoder` vía `JwtDecoders.fromIssuerLocation(security.jwt-issuer-uri)` + validador combinado issuer/audience con `JwtValidators.createDefaultWithIssuer` + `JwtClaimValidator` sobre el claim `aud`). El `playerId` autenticado es el claim `sub` del JWT, parseado como UUID (debe ser un UUID válido; no se añadió una excepción dedicada para un `sub` malformado, cae en `IllegalArgumentException`→400 vía el manejador ya existente, caso límite improbable en producción).
+- `true` (solo `local`/`test`): `DevelopmentIdentityFilter` sustituye por completo el resource server — no requiere IdP real ni red. Autentica cada request con un `playerId` fijo (`security.development-player-id`, mismo UUID `00000000-0000-0000-0000-000000000001` en local y test) salvo que la request traiga el header `X-Dev-Player-Id` con un UUID, en cuyo caso se usa ese (permite seguir simulando varios jugadores en tests/E2E sin un JWT real — decisión explícita del usuario para no romper escenarios como "consultar sesión ajena → 404").
+
+`/actuator/**` queda `permitAll()` en el filtro (health/info/metrics/shutdown ya no requerían auth antes de este cambio; se mantiene el mismo comportamiento). Todo lo demás requiere autenticación (`anyRequest().authenticated()`); sesión STATELESS, CSRF deshabilitado (API JSON pura, sin cookies).
+
+Variables de entorno nuevas para `cloud`: `JWT_ISSUER_URI`, `JWT_AUDIENCE` (sin default, igual que las de OpenAI/BD). `application.yml` común fija `security.development-user-enabled: false` por defecto (seguro por defecto; cada perfil local/test lo activa explícitamente).
+
+Dependencias nuevas en `pom.xml`: `spring-boot-starter-security`, `spring-boot-starter-oauth2-resource-server` (main), `spring-security-test` (test, sin uso todavío en tests automatizados — queda disponible para cuando se añadan tests `@WebMvcTest` de controladores).
+
+Cambios de contrato rotos deliberadamente (sin compatibilidad hacia atrás, a diferencia de otros puntos): `POST /api/v1/sessions` ya no acepta `playerId` en el body; todos los `GET`/`POST` que antes llevaban `?playerId=...` ya no lo aceptan como query param (un valor ahí ahora se ignora, no se valida ni ensucia el binding porque el parámetro ya no existe en la firma). La suite E2E de `Project GM automatics` (`GameSessionSteps.java`) se actualizó en la misma sesión: todos los `.queryParam("playerId", ...)` pasaron a `.header("X-Dev-Player-Id", ...)`, y el body de `crearSesion()` perdió el campo `"playerId"`.
+
+Sin cambios en la capa de servicio (`GameSessionService.getSession(sessionId, playerId)` y el resto de servicios siguen recibiendo `playerId` como antes; solo cambió de dónde lo obtiene el controlador). Sin `AuthenticationEntryPoint`/`AccessDeniedHandler` personalizados: los 401/403 de Spring Security usan el formato por defecto (no el `ApiError` JSON del resto de la API), pendiente si se quiere unificar más adelante.
+
 ### Higiene de secretos y variables de entorno locales
 
 Se encontró y corrigió dos veces en la misma sesión una API key real de OpenAI hardcodeada como valor por defecto de `OPENAI_API_KEY` en `application-local.yml` (nunca llegó a `origin`, pero sí llegó a estar commiteada en local una vez). Ahora `${OPENAI_API_KEY}` no tiene default, igual que en `cloud`.
@@ -429,4 +452,5 @@ Se creó `Project GM/.env.local` (añadido a `.gitignore` junto con `.env*`) com
 
 ## Próximo paso cuando se retome
 
-No queda ningún punto pendiente del "Orden recomendado de trabajo" original (1–10). El vertical slice MVP v0.2 tiene interpretación de texto libre en sus tres flujos principales, y observabilidad mínima (correlationId, logs JSON, métricas Micrometer) implementada (ver detalle arriba). Los pasos siguientes del TDD MVP v0.2 (no abordados todavía): 12) seguridad JWT, 14) pruebas end-to-end del vertical slice completo (más allá de lo ya cubierto en `Project GM automatics/`). También quedan mejoras de alcance dentro del combate (moverse/defenderse/usar objeto, sistema de armas/objetos — GDD sección 11) y de misiones/NPCs (diálogo real que use `NpcKnowledgeFact`, todavía sin llamador).
+No queda ningún punto pendiente del "Orden recomendado de trabajo" original (1–10), ni el punto 13 (observabilidad) ni el punto 12 (seguridad JWT, ver detalle arriba). El vertical slice MVP v0.2 tiene interpretación de texto libre en sus tres flujos principales, observabilidad mínima y autenticación JWT (con bypass de identidad fija/`X-Dev-Player-Id` en local/test). El punto 12 ya está verificado: compila y todos los tests pasan con el perfil `test` (incluido el `ApplicationTests` de contexto completo). En `cloud` sigue haciendo falta decidir/configurar un proveedor de identidad JWT real (issuer+audience) antes de desplegar. Del TDD MVP v0.2 solo queda el punto 14 (pruebas end-to-end del vertical slice completo, más allá de lo ya cubierto en `Project GM automatics/`). También quedan mejoras de alcance dentro del combate (moverse/defenderse/usar objeto, sistema de armas/objetos — GDD sección 11) y de misiones/NPCs (diálogo real que use `NpcKnowledgeFact`, todavía sin llamador).
+

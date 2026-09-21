@@ -26,3 +26,5 @@ openai:
 
 security:
   development-user-enabled: false
+  jwt-issuer-uri: ${JWT_ISSUER_URI}
+  jwt-audience: ${JWT_AUDIENCE}
