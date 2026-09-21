@@ -1,0 +1,67 @@
+{
+  "$schema": "https://product-context.kit/schemas/template-manifest.v1.json",
+  "schemaVersion": 1,
+  "kitVersion": "1.2.2",
+  "templateVersion": "1.0.1",
+  "description": "Source-of-truth manifest for the product-context template set. kitVersion is the overall Kit release version (mirrors the git tag vX.Y.Z and the top entry of CHANGELOG.md; bump it on every release). templateVersion is stamped into the frontmatter of every seeded doc and recorded in each product's docs/.pc-manifest.json. Bump it per the SemVer policy in docs/PHASE-2-ARCHITECTURE.md (ADR-9).",
+  "semver": {
+    "major": "Breaking structural change: a file renamed/removed/moved, a PC:* marker renamed/removed, an inter-doc relationship or agent read-contract changed. Requires pc-migrate-template.",
+    "minor": "Additive change: new file, new section, or new optional doc. Safe via idempotent re-seed; no migration required.",
+    "patch": "Non-structural change: wording, guidance, comments. No impact on relations, links, or agent contracts."
+  },
+  "contentVersioning": {
+    "field": "content_version",
+    "seed": "1.0.0",
+    "scope": "per-file",
+    "owner": "consuming team",
+    "description": "Tracks the evolution of the FILLED content of each seeded doc, bumped by the consuming team as they review/update it. Orthogonal to templateVersion (the kit's structural release). Deliberately NOT read by pc-validate-context mix detection or pc-migrate-template, so changing it never flags a version mix nor triggers a structural upgrade.",
+    "policy": {
+      "minor": "Normal content revision or update of the doc.",
+      "major": "Rewrite or change of scope of the doc."
+    }
+  },
+  "structure": {
+    "product": {
+      "anchor": "AGENTS.md",
+      "docsRoot": "docs/",
+      "files": [
+        "docs/index.md",
+        "docs/architecture.md",
+        "docs/conventions.md",
+        "docs/observability.md",
+        "docs/product-overview.md",
+        "docs/testing-conventions.md",
+        "docs/functionality/index.md",
+        "docs/functionality/_functionality.md",
+        "docs/repos/index.md"
+      ]
+    },
+    "repo": {
+      "anchor": "repo-AGENTS.md",
+      "docsRoot": "docs-agent/",
+      "coreFiles": [
+        "docs-agent/index.md",
+        "docs-agent/overview.md",
+        "docs-agent/architecture.md",
+        "docs-agent/dependencies.md",
+        "docs-agent/coding-patterns.md",
+        "docs-agent/env-and-config.md",
+        "docs-agent/testing.md"
+      ],
+      "optionalFiles": [
+        "docs-agent/api-contracts.md",
+        "docs-agent/domain-model.md",
+        "docs-agent/observability.md",
+        "docs-agent/functionality-map.md"
+      ],
+      "conceptRouting": "docs-agent/concepts/index.md is created lazily by pc-build-concepts for repo-internal entities."
+    }
+  },
+  "markers": [
+    "PC:CLONE-LINKS",
+    "PC:AGENT-DOCS",
+    "PC:STANDARD-CONVENTIONS",
+    "PC:REPO-ROWS",
+    "PC:DEPENDS-GRAPH"
+  ]
+}

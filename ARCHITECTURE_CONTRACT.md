@@ -1,5 +1,17 @@
 # PROJECT GM — PROMPT MAESTRO DE ARQUITECTURA E IMPLEMENTACIÓN
 
+> **Nota (2026-09-21):** el **principio fundamental** de este documento (la IA narra, el Game Engine
+> decide) sigue vigente y se cumple en el código real. Sin embargo, el **modelo técnico concreto**
+> descrito a partir de la sección 6 (`EntityDefinition`/`WorldEntity`/`EntityState`, `CapabilityType`
+> genérico, `ActionResolver`+`ActionHandler` por familia de acción, `GameRule.evaluate()`→`RuleResult`,
+> paquete `com.projectgm` con capas `application`/`infrastructure`) **no se implementó**: el proyecto
+> siguió en su lugar el modelo más simple y concreto de [TDD MVP v0.2.md](TDD%20MVP%20v0.2.md) (entidades
+> fijas del GDD — `Npc`, `Location`, `Quest`, `Combat` — en el paquete `pab.rpg`, `GameRule.check()` que
+> lanza excepción, un `ActionType` con 4 categorías fijas en vez de un catálogo abierto de acciones). Ver
+> [Project GM/docs-agent/architecture.md](Project%20GM/docs-agent/architecture.md) y
+> [domain-model.md](Project%20GM/docs-agent/domain-model.md) para la arquitectura real. Se conserva este
+> documento como registro de la visión original, no como especificación vigente de las secciones 6-38.
+
 ## 1. Objetivo del proyecto
 
 Estoy desarrollando **Project GM**, un RPG conversacional persistente en el que una IA actúa como Game Master.
@@ -32,6 +44,7 @@ El LLM nunca debe ser la fuente de verdad de:
 * muerte
 * tiempo
 * estado del mundo
+
 
 ---
 

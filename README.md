@@ -31,9 +31,9 @@ El proyecto empieza como experiencia individual, dejando margen para una futura 
 
 ## Estado actual
 
-El vertical slice de `MVP v0.2` está funcionalmente completo: sesión/personaje, eventos e idempotencia, reglas de acción por localización, NPCs/relaciones, misiones ramificadas, combate por turnos, narración vía OpenAI (o stub) e interpretación de texto libre para acciones, combate y misiones.
+El vertical slice de `MVP v0.2` está funcionalmente completo: sesión/personaje, eventos e idempotencia, reglas de acción por localización, NPCs/relaciones, misiones ramificadas, combate por turnos, narración vía OpenAI (o stub), interpretación de texto libre para acciones/combate/misiones, seguridad JWT, observabilidad (correlationId, logs estructurados, métricas) y un E2E completo del vertical slice (incluido reinicio real de la aplicación).
 
-Pendiente: seguridad JWT, observabilidad y un E2E completo del vertical slice.
+Pendiente (ver [MVP v0.3.md](MVP%20v0.3.md)): inventario/objetos, habilidades y modificadores circunstanciales, combate más allá de atacar, reglas de muerte, memoria de conversación, resiliencia ante throttling de OpenAI y límites de uso por usuario.
 
 Para el detalle punto por punto de lo implementado, ver [CONTEXTO_PROYECTO.md](CONTEXTO_PROYECTO.md).
 

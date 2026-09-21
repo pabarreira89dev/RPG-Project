@@ -1,5 +1,15 @@
 # TDD MVP v0.2 - Project GM
 
+> **Nota (2026-09-21):** el vertical slice descrito aquí ya está implementado y las 14 etapas de la
+> sección 17 están completadas (ver [CONTEXTO_PROYECTO.md](CONTEXTO_PROYECTO.md)); esta sección queda
+> como registro histórico de planificación, no como pendiente. Algunos detalles concretos divergieron
+> durante la implementación: el paquete real es `pab.rpg` (no `com.projectgm`, sin una capa
+> `application` separada — ver §5.2/§31), `NPC` se modeló como catálogo global sin `sessionId` propio
+> (como `Location`; solo `Relationship`/`NpcKnowledgeFact`/`QuestState` son por sesión — ver §7.2), y
+> `Item`/`SkillSet`/`conditions` (§7.2, §8.2) siguen sin implementar (ver [MVP v0.3.md](MVP%20v0.3.md)).
+> El contrato de API (§9) y las reglas de resolución (§8) sí se implementaron tal cual. Ver
+> [Project GM/docs-agent/](Project%20GM/docs-agent/index.md) para el estado real verificado contra el código.
+
 ## 1. Propósito
 
 Este documento transforma el GDD de Project GM y el alcance de [MVP v0.2](MVP%20v0.2.md) en una especificación técnica implementable con Java y Spring Boot.

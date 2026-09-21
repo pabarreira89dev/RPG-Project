@@ -1,0 +1,70 @@
+---
+status: draft
+template_version: 1.0.1
+content_version: 1.0.0
+summary: Core entities and game rules of Project GM's domain model.
+last_reviewed: null
+---
+
+# Project GM — Domain Model
+
+> See also: [`architecture.md`](architecture.md) for how these are wired together.
+
+## Session & character (per-session, mutable)
+- `GameSession` — `id`, `playerId`, `worldId`, `currentLocationId`, `status` (`SessionStatus`),
+  `worldTime`, optimistic-lock `version`, owns one `Character` (`@OneToOne`, cascade all).
+- `Character` — `name`, `level`, `experience`, embedded `AttributeSet` (6 attributes below), embedded
+  `HealthState` (`maximum`/`current`/`wounds`).
+
+## Attributes, checks & difficulty
+- `Attribute` enum: `STRENGTH`, `AGILITY`, `INTELLECT`, `WILLPOWER`, `PERCEPTION`, `PRESENCE`.
+- `Difficulty` enum (target numbers, TDD §8.3): `TRIVIAL`(8) < `EASY`(11) < `MODERATE`(14) < `HARD`(17) <
+  `VERY_HARD`(20) < `EXTREME`(23) < `LEGENDARY`(26).
+- `ActionType` enum binds a category to its attribute + base difficulty (GDD §5):
+  `EXPLORATION`→Perception/Easy, `SOCIAL`→Presence/Moderate, `INVESTIGATION`→Intellect/Moderate,
+  `PHYSICAL`→Strength/Hard.
+- `CheckResolver` rolls and computes a margin; `ResultGrade.fromMargin` buckets it (TDD §8.4): margin
+  ≥6 `GRAN_EXITO`, ≥0 `EXITO`, ≥-3 `EXITO_CON_COSTE`, ≥-7 `FRACASO`, else `FRACASO_GRAVE`.
+- `GameRule` implementations (`ActorAliveRule`, `LocationExistsRule`, `NpcTargetRule`) gate every action
+  before resolution; each throws `ActionNotAllowedException` (→ 422) to reject.
+
+## World catalog (global, not per-session)
+- `Location` — seeded (`village_square`, `tavern`, `forest_edge`); `GameSession.currentLocationId` FKs
+  into it.
+- `Npc` — 5 seeded NPCs; also carries `attributes` (`AttributeSet`) + `healthMaximum` so it can be a
+  combat participant. `NpcStatus` tracks alive/dead.
+- `Quest` (`code`, `title`, `description`) → `QuestStage` (1 `isInitial`, ≥1 `isTerminal` per quest) →
+  `QuestStageTransition` (edges: `fromStageId`+`choiceKey` unique per quest → `toStageId`). 3 seeded
+  quests: `aron_debt` (pay/confront), `forest_threat` (investigate/ignore), `village_elder_history`
+  (listen/dismiss).
+
+## Per-session, per-NPC state
+- `Relationship` (session+NPC unique) — numeric value, default 0; changed by `SOCIAL` actions
+  (`GRAN_EXITO` +2, `EXITO` +1, `EXITO_CON_COSTE` 0, `FRACASO` -1, `FRACASO_GRAVE` -2).
+- `NpcKnowledgeFact` (session+NPC) — exists with `recordKnowledge`/`knowsFact` but **no caller yet**
+  (deliberately left unwired until dialogue/quests need to record real facts).
+- `QuestState` (session+quest unique) — the only per-session quest data; `getVisibleQuests` only returns
+  quests that already have one.
+
+## Combat
+- `Combat` — `sessionId`, `status` (`CombatStatus`), `roundNumber`, `currentTurnOrder`, timestamps;
+  behavior via `advanceTurn`/`startNewRound`/`complete`. Exactly one `ACTIVE` combat per session,
+  enforced at the DB level (generated column + unique index, since MySQL has no partial indexes).
+- `CombatParticipant` — team (`CombatTeam`: `PLAYER`/`ENEMY`), status (`CombatParticipantStatus`),
+  initiative order.
+- `startCombat` validates the NPC is alive and in the session's current location, rolls
+  `d20 + Agility modifier` initiative (non-auditable `SecureRandom`, unlike `CheckResolver`).
+  `performAttack` uses `CheckResolver` with `Attribute.STRENGTH` + `Difficulty.MODERATE` (provisional —
+  no weapon/`Item` system yet) and a fixed damage table by `ResultGrade` (8/5/3/0/0). Only an "attack"
+  action exists (no move/defend/item, see `MVP v0.3.md`).
+
+## Events & idempotency
+- `GameEvent` — append-only per-session log (e.g. `RELATIONSHIP_CHANGED`), exposed read-only via
+  `GET .../events` for diagnostics only.
+- `ProcessedAction` — backs `IdempotencyService`: a repeated `idempotencyKey` on `POST .../actions`
+  returns the original result instead of re-resolving.
+
+## Deliberately out of scope for now (see `MVP v0.3.md`)
+Inventory/`Item`, skill/circumstance modifiers (parameters exist on `CheckResolver.resolve` but callers
+always pass 0), combat beyond "attack", death/`DOWNED`→stabilize rules, conversation memory, OpenAI
+retry/backoff, per-user usage limits.

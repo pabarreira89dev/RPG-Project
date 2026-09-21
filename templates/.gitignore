@@ -1,0 +1,7 @@
+# Cloned composing repos. Each is an INDEPENDENT git repo with its OWN remote.
+# Ignore the WHOLE folder — no negation. docs-agent/ lives in the composing repo's
+# own git/remote, NOT in the product repo.
+repos/
+
+# Transient working area for the pipeline (facts, summaries). Never committed.
+.pc-work/
