@@ -2,32 +2,31 @@ spring:
   profiles:
     on-profile: local
   datasource:
-    url: ${DATABASE_URL:jdbc:mysql://localhost:3306/project_gm?useSSL=false&serverTimezone=UTC}
-    username: ${DATABASE_USERNAME:admin}
-    password: ${DATABASE_PASSWORD:admin}
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
-    show-sql: true
+    show-sql: false
 
   http:
     client:
-      connect-timeout: ${OPENAI_CONNECT_TIMEOUT:5s}
-      read-timeout: ${OPENAI_READ_TIMEOUT:20s}
+      connect-timeout: ${OPENAI_CONNECT_TIMEOUT}
+      read-timeout: ${OPENAI_READ_TIMEOUT}
 
 logging:
   level:
     pab.rpg: DEBUG
-    org.hibernate.SQL: DEBUG
 
 # Requiere OPENAI_API_KEY y OPENAI_MODEL como variables de entorno; nunca hardcodear la API key aquí.
 openai:
-  enabled: ${OPENAI_ENABLED:true}
+  enabled: ${OPENAI_ENABLED}
   api-key: ${OPENAI_API_KEY}
-  base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
-  model: ${OPENAI_MODEL:gpt-4o-mini}
-  max-output-tokens: ${OPENAI_MAX_OUTPUT_TOKENS:2048}
-  temperature: ${OPENAI_TEMPERATURE:0.7}
+  base-url: ${OPENAI_BASE_URL}
+  model: ${OPENAI_MODEL}
+  max-output-tokens: ${OPENAI_MAX_OUTPUT_TOKENS}
+  temperature: ${OPENAI_TEMPERATURE}
 
 # /actuator/shutdown solo se expone en local: lo usa la suite E2E de "Project GM automatics" para reiniciar la app y probar persistencia real.
 management:

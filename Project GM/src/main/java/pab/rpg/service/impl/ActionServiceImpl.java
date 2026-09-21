@@ -53,10 +53,10 @@ public class ActionServiceImpl implements ActionService {
     public ActionResponse submitAction(SubmitActionCommand command) {
         validate(command);
 
-        LOG.info("Submitting action for sessionId={} playerId={} idempotencyKey={}",
+        LOG.info("Submitting action for sessionId={} playerId={} text={}",
                 command.sessionId(),
                 command.playerId(),
-                command.idempotencyKey()
+                command.text()
         );
 
         Timer.Sample sample = Timer.start(meterRegistry);
@@ -64,6 +64,11 @@ public class ActionServiceImpl implements ActionService {
         try {
             ActionResponse response = resolveAction(command);
             success = true;
+            LOG.info("Action resolved for sessionId={} playerId={} narration={}",
+                    command.sessionId(),
+                    command.playerId(),
+                    response.narration()
+            );
             return response;
         } finally {
             sample.stop(meterRegistry.timer("pab.rpg.action.duration", "outcome", success ? "success" : "error"));

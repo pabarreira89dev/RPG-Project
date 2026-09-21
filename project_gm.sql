@@ -13,5 +13,5 @@ SELECT * FROM quest_stage_transition;
 SELECT * FROM quest_state;
 SELECT * FROM relationship;
 
-DROP DATABASE IF EXISTS project_gm;
-CREATE DATABASE project_gm;
+DROP DATABASE IF EXISTS project_gm_local;
+CREATE DATABASE project_gm_local;

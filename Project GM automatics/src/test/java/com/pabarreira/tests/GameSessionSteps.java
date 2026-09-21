@@ -48,6 +48,13 @@ public class GameSessionSteps {
         this.playerId = UUID.randomUUID();
     }
 
+    @Given("un personaje que ya existe")
+    public void un_personaje_que_ya_existe() {
+        this.characterName = "Aldric";
+        this.characterLevel = 1;
+        this.playerId = UUID.randomUUID();
+    }
+
     @Given("un jugador cualquiera")
     public void un_jugador_cualquiera() {
         this.characterName = "Personaje de prueba";
@@ -58,6 +65,13 @@ public class GameSessionSteps {
     @Given("el jugador ha creado una sesión de juego en la localización {string}")
     public void el_jugador_ha_creado_una_sesion_de_juego_en_la_localizacion(String locationCode) {
         crearSesion(locationCode);
+        lastSessionId = UUID.fromString(response.jsonPath().getString("sessionId"));
+    }
+
+    @Given("el jugador tiene una sesión de juego existente en la localización {string}")
+    public void el_jugador_tiene_una_sesion_de_juego_existente_en_la_localizacion(String locationCode) {
+        crearSesion(locationCode);
+        assertThat(response.statusCode(), equalTo(201));
         lastSessionId = UUID.fromString(response.jsonPath().getString("sessionId"));
     }
 

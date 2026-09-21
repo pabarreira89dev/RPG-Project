@@ -33,3 +33,10 @@ Característica: Envío de acciones de juego
     Cuando el jugador envía la acción "Hablo con la Anciana del pueblo"
     Entonces la operación responde con estado 200
     Y la acción registra un evento de cambio de relación
+
+  Escenario: Enviar una acción social dirigida a un NPC visible con personaje y sesión existentes
+    Dado un personaje que ya existe
+    Y el jugador tiene una sesión de juego existente en la localización "village_square"
+    Cuando el jugador envía la acción "Hablo con la Anciana del pueblo"
+    Entonces la operación responde con estado 200
+    Y la acción registra un evento de cambio de relación
