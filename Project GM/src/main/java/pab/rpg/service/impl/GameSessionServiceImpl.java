@@ -13,6 +13,7 @@ import pab.rpg.domain.entity.SessionStatus;
 import pab.rpg.domain.repository.GameSessionRepository;
 import pab.rpg.exception.SessionNotFoundException;
 import pab.rpg.service.GameSessionService;
+import pab.rpg.service.ItemService;
 
 import java.time.Instant;
 import java.util.List;
@@ -28,6 +29,7 @@ public class GameSessionServiceImpl implements GameSessionService {
 
     private final GameSessionRepository gameSessionRepository;
     private final MeterRegistry meterRegistry;
+    private final ItemService itemService;
 
     @Override
     public GameSession createSession(CreateGameSessionCommand command) {
@@ -61,6 +63,7 @@ public class GameSessionServiceImpl implements GameSessionService {
 
         session = gameSessionRepository.save(session);
         meterRegistry.counter("pab.rpg.sessions.created").increment();
+        itemService.seedInitialItems(session.getId());
 
         LOG.info("Created new game session with id={} for playerId={} in worldId={}",
                 session.getId(),

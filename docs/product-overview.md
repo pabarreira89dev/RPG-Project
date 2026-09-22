@@ -23,6 +23,8 @@ leaving room for a future multiplayer evolution.
 - Branching quests, modeled as a stage/transition state machine per quest, advanced by explicit choice
   or free text.
 - NPCs with per-session relationships that change based on the player's social actions.
+- Basic inventory: a global item catalog plus per-session item instances that the player can find lying
+  in a location and pick up (owned items don't influence combat damage yet).
 - AI narration and free-text interpretation, isolated behind the `MasterAdapter` interface so the AI can
   be swapped (OpenAI Responses API in `cloud`, a deterministic stub in `local`/`test`) without touching
   domain logic.
@@ -32,8 +34,8 @@ leaving room for a future multiplayer evolution.
 Active development targets the `MVP v0.2` vertical slice (see `MVP v0.2.md`): 1 scenario, 3 locations,
 5 NPCs, 1 faction, 3 branching quests, basic turn-based combat. `MVP v0.1.md` describes the full
 long-term vision (5–10h campaign, multiple regions/factions/economy) which is explicitly **out of scope**
-for now. `MVP v0.3.md` tracks TDD items closed out of order (JWT, observability, inventory, death rules,
-etc.) with no new narrative content.
+for now. `MVP v0.3.md` tracks TDD items closed out of order (JWT, observability, E2E suite, basic
+inventory done; death rules, weapon damage, skill modifiers, etc. still pending).
 
 ## Key stakeholders / actors
 - **Player** — the sole external actor for now; interacts only via the HTTP API (no first-party client

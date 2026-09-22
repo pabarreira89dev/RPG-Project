@@ -46,6 +46,21 @@ last_reviewed: null
 - `QuestState` (session+quest unique) — the only per-session quest data; `getVisibleQuests` only returns
   quests that already have one.
 
+## Items & inventory
+- `ItemTemplate` — global catalog (like `Location`/`Npc`/`Quest`): `code` (unique), `name`, `description`.
+  3 seeded (`rusty_dagger`, `healing_herbs`, `old_coin_pouch`).
+- `Item` — per-session instance: `sessionId`, `templateId`, `quantity`, `durability` (nullable, unused so
+  far), and exactly one of `ownerId` (carried by the session's `Character`) / `locationId` (lying in the
+  world), enforced by a DB `CHECK` (same XOR pattern as `combat_participant.character_id`/`npc_id`).
+- `ItemService.seedInitialItems` spawns the 3 seed items unowned into their fixed locations
+  (`forest_edge`/`tavern`) when a session is created (`GameSessionServiceImpl.createSession`), so every
+  new game starts with something to find.
+- `pickUpItem` validates the item is unowned and in the player's current location, assigns it to the
+  `Character`, and appends an `ITEM_ACQUIRED` event — the only way an item can end up owned (TDD §15
+  invariant: "no item appears without an `ITEM_ACQUIRED` event").
+- Not yet wired: using items in combat/weapon-damage influence, "use item" as an action, dropping items,
+  free-text pick-up (only explicit `itemId` today) — see `MVP v0.3.md`.
+
 ## Combat
 - `Combat` — `sessionId`, `status` (`CombatStatus`), `roundNumber`, `currentTurnOrder`, timestamps;
   behavior via `advanceTurn`/`startNewRound`/`complete`. Exactly one `ACTIVE` combat per session,
@@ -55,8 +70,8 @@ last_reviewed: null
 - `startCombat` validates the NPC is alive and in the session's current location, rolls
   `d20 + Agility modifier` initiative (non-auditable `SecureRandom`, unlike `CheckResolver`).
   `performAttack` uses `CheckResolver` with `Attribute.STRENGTH` + `Difficulty.MODERATE` (provisional —
-  no weapon/`Item` system yet) and a fixed damage table by `ResultGrade` (8/5/3/0/0). Only an "attack"
-  action exists (no move/defend/item, see `MVP v0.3.md`).
+  no weapon-damage integration with `Item` yet, see `MVP v0.3.md`) and a fixed damage table by
+  `ResultGrade` (8/5/3/0/0). Only an "attack" action exists (no move/defend/item, see `MVP v0.3.md`).
 
 ## Events & idempotency
 - `GameEvent` — append-only per-session log (e.g. `RELATIONSHIP_CHANGED`), exposed read-only via
@@ -65,6 +80,6 @@ last_reviewed: null
   returns the original result instead of re-resolving.
 
 ## Deliberately out of scope for now (see `MVP v0.3.md`)
-Inventory/`Item`, skill/circumstance modifiers (parameters exist on `CheckResolver.resolve` but callers
-always pass 0), combat beyond "attack", death/`DOWNED`→stabilize rules, conversation memory, OpenAI
-retry/backoff, per-user usage limits.
+Weapon/item influence on combat damage, skill/circumstance modifiers (parameters exist on
+`CheckResolver.resolve` but callers always pass 0), combat beyond "attack", death/`DOWNED`→stabilize
+rules, conversation memory, OpenAI retry/backoff, per-user usage limits.

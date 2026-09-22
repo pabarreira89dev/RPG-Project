@@ -32,7 +32,7 @@ flowchart TB
 - `api.dto.request` / `api.dto.response` — request/response records; `api.mapper` (MapStruct) converts
   request DTOs to service commands where mapping is non-trivial (e.g. `CreateSessionRequestMapper`).
 - `service` (interfaces) / `service.impl` — one interface per bounded capability (`GameSessionService`,
-  `ActionService`, `CombatService`, `QuestService`, `NpcService`, `GameEventService`,
+  `ActionService`, `CombatService`, `QuestService`, `NpcService`, `ItemService`, `GameEventService`,
   `IdempotencyService`) with a single impl each, injected by type (no multi-impl selection except
   `MasterAdapter`).
 - `domain.entity` / `domain.repository` — JPA entities (protected no-args ctor, no public setters,
@@ -75,8 +75,9 @@ flowchart TB
 - **Explicit IDs always override AI interpretation.** Every endpoint that can use `MasterAdapter` also
   accepts explicit ids (`actionType`/`targetNpcId`, `attackerParticipantId`/`targetParticipantId`,
   `choiceKey`) — if present, the AI path is skipped entirely (see controller `if (x != null)` branches).
-- **NPCs/Locations/Quests are global catalog data** (like a static ruleset), not per-session; only
-  `Relationship`, `NpcKnowledgeFact`, `QuestState` and `Combat*` are per-session/mutable.
+- **NPCs/Locations/Quests/item templates are global catalog data** (like a static ruleset), not
+  per-session; only `Relationship`, `NpcKnowledgeFact`, `QuestState`, `Item` (instances) and `Combat*`
+  are per-session/mutable.
 - **One `Combat` per session enforced by DB**, not just app logic — MySQL has no partial/filtered unique
   index, so a generated column (`active_session_id`, non-NULL only when `status='ACTIVE'`) + unique
   index on it emulates Postgres's `WHERE status='ACTIVE'` partial index.

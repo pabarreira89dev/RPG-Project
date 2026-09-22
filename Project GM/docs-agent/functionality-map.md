@@ -19,6 +19,7 @@ last_reviewed: null
 | Combat | provider | provides:rest GET /api/v1/sessions/{sessionId}/combat \| provides:rest POST /api/v1/sessions/{sessionId}/combat/start \| provides:rest POST /api/v1/sessions/{sessionId}/combat/{combatId}/attack | CombatController.java, CombatServiceImpl.java | — |
 | Quests | provider | provides:rest GET /api/v1/sessions/{sessionId}/quests \| provides:rest POST /api/v1/sessions/{sessionId}/quests/{questCode}/start \| provides:rest POST /api/v1/sessions/{sessionId}/quests/{questCode}/advance | QuestController.java, QuestServiceImpl.java | — |
 | NPCs & relationships | provider | provides:rest GET /api/v1/sessions/{sessionId}/npcs | NpcController.java, NpcServiceImpl.java | — |
+| Inventory & items | provider | provides:rest GET /api/v1/sessions/{sessionId}/items \| provides:rest POST /api/v1/sessions/{sessionId}/items/{itemId}/pick-up | ItemController.java, ItemServiceImpl.java | — |
 | AI narration & free-text interpretation | participant | internal (invoked by the action/combat/quest endpoints above, no dedicated route) | MasterAdapter.java, OpenAiMasterAdapter.java, StubMasterAdapter.java | — |
 | Authentication & player identity | library | internal (cross-cutting filter chain, not a functional endpoint) | SecurityConfig.java, DevelopmentIdentityFilter.java, CurrentPlayerArgumentResolver.java | — |
 | Observability | standalone | internal | CorrelationIdFilter.java, logback-spring.xml | — |

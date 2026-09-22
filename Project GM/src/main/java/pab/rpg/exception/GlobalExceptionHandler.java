@@ -71,6 +71,18 @@ public class GlobalExceptionHandler {
         return apiError("COMBAT_NOT_ALLOWED", exception.getMessage());
     }
 
+    @ExceptionHandler(ItemNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiError handleItemNotFound(ItemNotFoundException exception) {
+        return apiError("ITEM_NOT_FOUND", exception.getMessage());
+    }
+
+    @ExceptionHandler(ItemNotAllowedException.class)
+    @ResponseStatus(HttpStatus.UNPROCESSABLE_CONTENT)
+    public ApiError handleItemNotAllowed(ItemNotAllowedException exception) {
+        return apiError("ITEM_NOT_ALLOWED", exception.getMessage());
+    }
+
     @ExceptionHandler(AiUnavailableException.class)
     @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
     public ApiError handleAiUnavailable(AiUnavailableException exception) {

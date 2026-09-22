@@ -43,6 +43,12 @@ last_reviewed: null
 |--------|------|---------|
 | `GET` | `/sessions/{sessionId}/npcs` | NPCs at the session's current location, each with the player's relationship value (0 by default) |
 
+## Items — `ItemController`
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/sessions/{sessionId}/items` | `InventoryResponse(inventory, atLocation)` — the player's carried items and the (unowned) items lying in the current location |
+| `POST` | `/sessions/{sessionId}/items/{itemId}/pick-up` | Pick up an item lying in the current location — 404 `ITEM_NOT_FOUND` if it doesn't exist in this session, 422 `ITEM_NOT_ALLOWED` if it's already owned or lying in a different location. Explicit `itemId` only — no free-text interpretation yet |
+
 ## Events — `GameEventController`
 | Method | Path | Purpose |
 |--------|------|---------|
@@ -58,10 +64,12 @@ All errors return a single JSON shape from `GlobalExceptionHandler`:
 | 404 | `SESSION_NOT_FOUND` | Session missing or belongs to another player |
 | 404 | `QUEST_NOT_FOUND` | Unknown quest code |
 | 404 | `COMBAT_NOT_FOUND` | No active combat |
+| 404 | `ITEM_NOT_FOUND` | Item id doesn't exist in this session |
 | 409 | `STALE_SESSION_VERSION` | `expectedVersion` mismatch or concurrent write (`ObjectOptimisticLockingFailureException`) |
 | 422 | `ACTION_NOT_ALLOWED` | A `GameRule` rejected the action (e.g. dead actor, invalid location/target) |
 | 422 | `QUEST_TRANSITION_NOT_ALLOWED` | Invalid/missing `choiceKey` for the quest's current stage |
 | 422 | `COMBAT_NOT_ALLOWED` | Invalid combat start/attack (dead/absent NPC, wrong turn, already active combat) |
+| 422 | `ITEM_NOT_ALLOWED` | Item already picked up, or not in the player's current location |
 | 503 | `OPENAI_UNAVAILABLE` | `MasterAdapter` network failure or empty narration |
 | 400 | `INVALID_REQUEST` | `IllegalArgumentException`/`NullPointerException` fallback |
 

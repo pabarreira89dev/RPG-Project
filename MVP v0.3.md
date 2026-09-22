@@ -10,7 +10,7 @@ Ver [CONTEXTO_PROYECTO.md](CONTEXTO_PROYECTO.md) para el detalle de lo ya implem
 |-----------------------------------|-------------------------------|--------------------------------------------------------|---|
 |Seguridad                         |✅ Hecho (2026-09-21) — JWT validado por Spring Security (`cloud`) o identidad de desarrollo fija/override por header (`local`/`test`); `playerId` sale siempre de la identidad autenticada, nunca del body/query |JWT validado por Spring Security; `playerId` sale del token |§12|
 |Observabilidad                    |✅ Hecho (2026-09-19) — `correlationId`/`sessionId` en MDC, logs JSON (`logstash-logback-encoder`), métricas Micrometer (duración de acciones, conflictos de versión, uso/coste de OpenAI, etc.) |Actuator, logs estructurados con `correlationId`, métricas Micrometer |§14|
-|Inventario / objetos              |No implementado               |Entidad `Item`, eventos `ITEM_ACQUIRED`, objetos con propietario/ubicación |§3.1, §7.2, §15|
+|Inventario / objetos              |✅ Hecho (2026-09-22) — `ItemTemplate` (catálogo) + `Item` (instancia por sesión, propietario xor ubicación), evento `ITEM_ACQUIRED` al recoger, endpoints `GET`/`POST .../items` |Entidad `Item`, eventos `ITEM_ACQUIRED`, objetos con propietario/ubicación |§3.1, §7.2, §15|
 |Habilidades y modificadores       |Solo atributo base (sin `skillBonus`/circunstancial) |`SkillSet` por personaje y modificadores circunstanciales -3..+3 |§8.2|
 |Combate: acciones más allá de atacar |Solo "atacar"                |Moverse, defenderse, usar objeto, huida (GDD §11)       |§8.5|
 |Combate: armas reales             |Daño por tabla fija de `ResultGrade` |Daño derivado de la definición del arma (`Item`)         |§8.5|
@@ -26,7 +26,7 @@ Al terminar esta versión:
 
 - ✅ ningún cliente puede suplantar a otro jugador ni forzar un `playerId` ajeno;
 - ✅ toda petición es trazable mediante `correlationId` en logs y métricas;
-- el jugador puede recoger, portar y usar objetos básicos, y el arma equipada influye en el daño de combate;
+- ✅ el jugador puede recoger y portar objetos básicos; pendiente que el arma equipada influya en el daño de combate;
 - una tirada puede beneficiarse de una habilidad entrenada o un modificador circunstancial válido, no solo del atributo;
 - el combate ofrece más de una acción táctica por turno además de atacar;
 - un personaje derribado puede ser estabilizado, curado o puede morir si nadie interviene;
@@ -40,4 +40,4 @@ Esta versión sigue sin incluir el alcance descartado en MVP v0.2 (economía din
 
 ## Criterio de validación
 
-MVP v0.3 estará completo cuando se cumplan los criterios de aceptación técnico de la sección 18 del TDD que seguían abiertos: ~~seguridad JWT operativa~~ ✅, ~~observabilidad mínima disponible~~ ✅, inventario básico funcionando, reglas de muerte aplicadas y ~~una suite end-to-end que verifique el vertical slice completo, incluyendo persistencia tras reiniciar la aplicación~~ ✅. Pendiente real: inventario/`Item`, habilidades y modificadores circunstanciales, combate más allá de atacar, armas reales, reglas de muerte, memoria de conversación, resiliencia ante throttling de OpenAI y límites de uso por usuario — ver detalle en [CONTEXTO_PROYECTO.md](CONTEXTO_PROYECTO.md) y en `Project GM/docs-agent/domain-model.md`.
+MVP v0.3 estará completo cuando se cumplan los criterios de aceptación técnico de la sección 18 del TDD que seguían abiertos: ~~seguridad JWT operativa~~ ✅, ~~observabilidad mínima disponible~~ ✅, ~~inventario básico funcionando~~ ✅, reglas de muerte aplicadas y ~~una suite end-to-end que verifique el vertical slice completo, incluyendo persistencia tras reiniciar la aplicación~~ ✅. Pendiente real: habilidades y modificadores circunstanciales, combate más allá de atacar, armas reales (incluye que el arma equipada del inventario influya en el daño), reglas de muerte, memoria de conversación, resiliencia ante throttling de OpenAI y límites de uso por usuario — ver detalle en [CONTEXTO_PROYECTO.md](CONTEXTO_PROYECTO.md) y en `Project GM/docs-agent/domain-model.md`.
