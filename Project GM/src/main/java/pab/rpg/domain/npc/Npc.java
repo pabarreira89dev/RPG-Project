@@ -1,4 +1,4 @@
-package pab.rpg.domain.entity;
+package pab.rpg.domain.npc;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
@@ -13,6 +13,7 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import pab.rpg.domain.character.AttributeSet;
 
 import java.util.UUID;
 

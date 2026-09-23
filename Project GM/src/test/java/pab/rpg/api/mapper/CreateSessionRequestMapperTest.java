@@ -4,8 +4,8 @@ import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 import pab.rpg.api.dto.CreateGameSessionCommand;
 import pab.rpg.api.dto.request.CreateSessionRequest;
-import pab.rpg.domain.entity.AttributeSet;
-import pab.rpg.domain.entity.HealthState;
+import pab.rpg.domain.character.AttributeSet;
+import pab.rpg.domain.character.HealthState;
 
 import java.time.Instant;
 import java.util.UUID;

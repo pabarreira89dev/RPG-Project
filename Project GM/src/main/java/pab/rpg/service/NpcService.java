@@ -1,6 +1,6 @@
 package pab.rpg.service;
 
-import pab.rpg.domain.entity.Npc;
+import pab.rpg.domain.npc.Npc;
 
 import java.util.List;
 import java.util.UUID;

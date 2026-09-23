@@ -1,7 +1,7 @@
 package pab.rpg.domain.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import pab.rpg.domain.entity.QuestStage;
+import pab.rpg.domain.quest.QuestStage;
 
 import java.util.Optional;
 import java.util.UUID;

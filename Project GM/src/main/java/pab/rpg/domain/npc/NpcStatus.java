@@ -1,4 +1,4 @@
-package pab.rpg.domain.entity;
+package pab.rpg.domain.npc;
 
 public enum NpcStatus {
     ALIVE,

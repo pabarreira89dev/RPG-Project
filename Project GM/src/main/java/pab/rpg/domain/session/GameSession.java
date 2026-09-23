@@ -1,4 +1,4 @@
-package pab.rpg.domain.entity;
+package pab.rpg.domain.session;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -15,6 +15,7 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import pab.rpg.domain.character.Character;
 
 import java.time.Duration;
 import java.time.Instant;

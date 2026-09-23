@@ -1,4 +1,4 @@
-package pab.rpg.domain.entity;
+package pab.rpg.domain.item;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,28 +13,37 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-// A valid branch (edge) in a quest's state machine, selected by a player choiceKey.
+// Session-scoped item instance: exactly one of ownerId (carried by the player character) or
+// locationId (lying in the world) is set at any time, enforced by a DB check constraint.
 @Entity
-@Table(name = "quest_stage_transition")
+@Table(name = "item")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-public class QuestStageTransition {
+public class Item {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(nullable = false)
-    private UUID questId;
+    private UUID sessionId;
 
     @Column(nullable = false)
-    private UUID fromStageId;
+    private UUID templateId;
+
+    private UUID ownerId;
+
+    private UUID locationId;
 
     @Column(nullable = false)
-    private UUID toStageId;
+    private int quantity;
 
-    @Column(nullable = false, length = 60)
-    private String choiceKey;
+    private Integer durability;
+
+    public void pickUp(UUID ownerId) {
+        this.ownerId = ownerId;
+        this.locationId = null;
+    }
 
 }

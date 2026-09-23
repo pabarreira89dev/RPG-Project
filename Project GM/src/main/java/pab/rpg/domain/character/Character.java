@@ -1,4 +1,4 @@
-package pab.rpg.domain.entity;
+package pab.rpg.domain.character;
 
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.AttributeOverrides;

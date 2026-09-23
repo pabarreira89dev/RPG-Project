@@ -1,11 +1,11 @@
 package pab.rpg.api.dto.response;
 
 import lombok.Builder;
-import pab.rpg.domain.entity.AttributeSet;
-import pab.rpg.domain.entity.Character;
-import pab.rpg.domain.entity.GameSession;
-import pab.rpg.domain.entity.HealthState;
-import pab.rpg.domain.entity.SessionStatus;
+import pab.rpg.domain.character.AttributeSet;
+import pab.rpg.domain.character.Character;
+import pab.rpg.domain.session.GameSession;
+import pab.rpg.domain.character.HealthState;
+import pab.rpg.domain.session.SessionStatus;
 
 import java.time.Instant;
 import java.util.UUID;

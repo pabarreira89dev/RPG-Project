@@ -2,7 +2,7 @@ package pab.rpg.domain.rules;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import pab.rpg.domain.entity.Npc;
+import pab.rpg.domain.npc.Npc;
 import pab.rpg.domain.repository.NpcRepository;
 import pab.rpg.exception.ActionNotAllowedException;
 

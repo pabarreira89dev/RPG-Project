@@ -1,7 +1,7 @@
 package pab.rpg.api.dto.response;
 
 import lombok.Builder;
-import pab.rpg.domain.entity.QuestStatus;
+import pab.rpg.domain.quest.QuestStatus;
 import pab.rpg.service.QuestService;
 
 @Builder

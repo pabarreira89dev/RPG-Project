@@ -1,6 +1,6 @@
 package pab.rpg.domain.repository;
 
-import pab.rpg.domain.entity.GameEvent;
+import pab.rpg.domain.session.GameEvent;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

@@ -1,4 +1,4 @@
-package pab.rpg.domain.entity;
+package pab.rpg.domain.character;
 
 import jakarta.persistence.Embeddable;
 import lombok.AccessLevel;

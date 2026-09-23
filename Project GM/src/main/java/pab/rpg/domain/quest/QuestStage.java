@@ -1,4 +1,4 @@
-package pab.rpg.domain.entity;
+package pab.rpg.domain.quest;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,25 +13,32 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-// Quest catalog entry (shared definition, like Location/Npc), independent of any session's progress.
+// A node in a quest's state machine (GDD sec. 23). Exactly one stage per quest is initial;
+// terminal stages complete the quest when reached.
 @Entity
-@Table(name = "quest")
+@Table(name = "quest_stage")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-public class Quest {
+public class QuestStage {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false, unique = true, length = 60)
-    private String code;
+    @Column(nullable = false)
+    private UUID questId;
 
-    @Column(nullable = false, length = 120)
-    private String title;
+    @Column(nullable = false, length = 60)
+    private String code;
 
     @Column(nullable = false, length = 500)
     private String description;
+
+    @Column(name = "is_initial", nullable = false)
+    private boolean initial;
+
+    @Column(name = "is_terminal", nullable = false)
+    private boolean terminal;
 
 }

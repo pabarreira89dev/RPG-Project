@@ -1,7 +1,9 @@
-package pab.rpg.domain.entity;
+package pab.rpg.domain.quest;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -10,19 +12,17 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
-import java.util.Map;
 import java.util.UUID;
 
+// A session's progress through a quest's state machine.
 @Entity
-@Table(name = "processed_action")
+@Table(name = "quest_state")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-public class ProcessedAction {
+public class QuestState {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -32,16 +32,25 @@ public class ProcessedAction {
     private UUID sessionId;
 
     @Column(nullable = false)
-    private UUID idempotencyKey;
+    private UUID questId;
 
     @Column(nullable = false)
-    private UUID actionId;
+    private UUID currentStageId;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(nullable = false, columnDefinition = "json")
-    private Map<String, Object> responsePayload;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private QuestStatus status;
 
     @Column(nullable = false)
-    private Instant createdAt;
+    private Instant startedAt;
+
+    @Column(nullable = false)
+    private Instant updatedAt;
+
+    public void advanceTo(UUID stageId, boolean terminal, Instant now) {
+        this.currentStageId = stageId;
+        this.status = terminal ? QuestStatus.COMPLETED : QuestStatus.ACTIVE;
+        this.updatedAt = now;
+    }
 
 }

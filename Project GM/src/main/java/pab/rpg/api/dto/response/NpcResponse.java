@@ -1,8 +1,8 @@
 package pab.rpg.api.dto.response;
 
 import lombok.Builder;
-import pab.rpg.domain.entity.Npc;
-import pab.rpg.domain.entity.NpcStatus;
+import pab.rpg.domain.npc.Npc;
+import pab.rpg.domain.npc.NpcStatus;
 
 import java.util.UUID;
 

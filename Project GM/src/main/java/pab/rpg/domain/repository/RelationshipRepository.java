@@ -1,7 +1,7 @@
 package pab.rpg.domain.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import pab.rpg.domain.entity.Relationship;
+import pab.rpg.domain.npc.Relationship;
 
 import java.util.List;
 import java.util.Optional;

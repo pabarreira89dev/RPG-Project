@@ -1,8 +1,8 @@
 package pab.rpg.service;
 
-import pab.rpg.domain.entity.CombatParticipantStatus;
-import pab.rpg.domain.entity.CombatStatus;
-import pab.rpg.domain.entity.CombatTeam;
+import pab.rpg.domain.combat.CombatParticipantStatus;
+import pab.rpg.domain.combat.CombatStatus;
+import pab.rpg.domain.combat.CombatTeam;
 
 import java.util.List;
 import java.util.Optional;

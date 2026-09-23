@@ -1,7 +1,7 @@
 package pab.rpg.domain.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import pab.rpg.domain.entity.CombatParticipant;
+import pab.rpg.domain.combat.CombatParticipant;
 
 import java.util.List;
 import java.util.UUID;

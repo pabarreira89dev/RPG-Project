@@ -1,4 +1,4 @@
-package pab.rpg.domain.entity;
+package pab.rpg.domain.combat;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

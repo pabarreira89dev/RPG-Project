@@ -1,4 +1,4 @@
-package pab.rpg.domain.entity;
+package pab.rpg.domain.session;
 
 public enum SessionStatus {
     ACTIVE,

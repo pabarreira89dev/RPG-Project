@@ -1,6 +1,6 @@
 package pab.rpg.service;
 
-import pab.rpg.domain.entity.QuestStatus;
+import pab.rpg.domain.quest.QuestStatus;
 
 import java.util.List;
 import java.util.Optional;

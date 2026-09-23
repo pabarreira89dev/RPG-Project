@@ -1,4 +1,4 @@
-package pab.rpg.domain.entity;
+package pab.rpg.domain.quest;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,12 +13,13 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
+// Quest catalog entry (shared definition, like Location/Npc), independent of any session's progress.
 @Entity
-@Table(name = "location")
+@Table(name = "quest")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-public class Location {
+public class Quest {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -28,7 +29,7 @@ public class Location {
     private String code;
 
     @Column(nullable = false, length = 120)
-    private String name;
+    private String title;
 
     @Column(nullable = false, length = 500)
     private String description;

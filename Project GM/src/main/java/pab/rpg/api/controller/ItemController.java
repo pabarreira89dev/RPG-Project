@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import pab.rpg.api.dto.response.InventoryResponse;
 import pab.rpg.api.dto.response.ItemResponse;
-import pab.rpg.domain.entity.GameSession;
+import pab.rpg.domain.session.GameSession;
 import pab.rpg.security.CurrentPlayer;
 import pab.rpg.service.GameSessionService;
 import pab.rpg.service.ItemService;

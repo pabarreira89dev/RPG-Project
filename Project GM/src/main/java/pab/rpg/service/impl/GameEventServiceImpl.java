@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import pab.rpg.domain.entity.GameEvent;
+import pab.rpg.domain.session.GameEvent;
 import pab.rpg.domain.repository.GameEventRepository;
 import pab.rpg.service.GameEventService;
 

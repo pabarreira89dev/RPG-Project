@@ -1,7 +1,7 @@
 package pab.rpg.domain.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import pab.rpg.domain.entity.QuestState;
+import pab.rpg.domain.quest.QuestState;
 
 import java.util.List;
 import java.util.Optional;

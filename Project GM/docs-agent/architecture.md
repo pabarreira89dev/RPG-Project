@@ -35,9 +35,10 @@ flowchart TB
   `ActionService`, `CombatService`, `QuestService`, `NpcService`, `ItemService`, `GameEventService`,
   `IdempotencyService`) with a single impl each, injected by type (no multi-impl selection except
   `MasterAdapter`).
-- `domain.entity` / `domain.repository` — JPA entities (protected no-args ctor, no public setters,
+- `domain.{session,character,combat,npc,quest,item,world}` / `domain.repository` — JPA entities, split
+  into feature-cohesive subpackages directly under `domain` (protected no-args ctor, no public setters,
   behavior via intention-revealing methods e.g. `GameSession.advanceWorldTime`) and their Spring Data
-  repositories, one per aggregate.
+  repositories (still flat in `domain.repository`, one per aggregate).
 - `domain.rules` — deterministic game rules: `CheckResolver` performs the roll/margin computation,
   `ResultGrade.fromMargin` buckets the result, `GameRule` implementations (`ActorAliveRule`,
   `LocationExistsRule`, `NpcTargetRule`) are all injected as `List<GameRule>` and run before an action

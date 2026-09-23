@@ -1,7 +1,7 @@
 package pab.rpg.api.dto.response;
 
 import lombok.Builder;
-import pab.rpg.domain.entity.GameEvent;
+import pab.rpg.domain.session.GameEvent;
 
 import java.time.Instant;
 import java.util.Map;

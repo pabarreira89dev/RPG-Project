@@ -1,4 +1,4 @@
-package pab.rpg.domain.entity;
+package pab.rpg.domain.combat;
 
 public enum CombatStatus {
     ACTIVE,

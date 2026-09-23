@@ -1,6 +1,6 @@
 package pab.rpg.domain.repository;
 
-import pab.rpg.domain.entity.ProcessedAction;
+import pab.rpg.domain.session.ProcessedAction;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

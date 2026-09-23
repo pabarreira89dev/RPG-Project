@@ -1,4 +1,4 @@
-package pab.rpg.domain.entity;
+package pab.rpg.domain.item;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -11,31 +11,27 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.Instant;
 import java.util.UUID;
 
-// Groundwork for asymmetric knowledge (GDD sec. 18-19); not yet written by any caller.
+// Item catalog entry (shared definition, like Location/Npc/Quest), independent of any session's items.
 @Entity
-@Table(name = "npc_knowledge_fact")
+@Table(name = "item_template")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-public class NpcKnowledgeFact {
+public class ItemTemplate {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false)
-    private UUID sessionId;
+    @Column(nullable = false, unique = true, length = 60)
+    private String code;
 
-    @Column(nullable = false)
-    private UUID npcId;
+    @Column(nullable = false, length = 120)
+    private String name;
 
-    @Column(nullable = false, length = 100)
-    private String factKey;
-
-    @Column(nullable = false)
-    private Instant learnedAt;
+    @Column(nullable = false, length = 500)
+    private String description;
 
 }

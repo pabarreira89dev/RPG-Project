@@ -14,7 +14,10 @@ last_reviewed: null
 - `@Entity` + `@Getter` + `@NoArgsConstructor(access = PROTECTED)` + `@AllArgsConstructor`, **never**
   `@Setter`. Mutate state only via intention-revealing methods on the entity itself (e.g.
   `GameSession.advanceWorldTime`, `Combat.advanceTurn`/`startNewRound`/`complete`).
-- Repositories live in `domain.repository`, separate from `domain.entity` — one repository per
+- Entities live in feature-cohesive subpackages directly under `domain` (`domain.session`,
+  `domain.character`, `domain.combat`, `domain.npc`, `domain.quest`, `domain.item`, `domain.world`) —
+  same grouping principle as `domain.rules`, replacing the old single flat `domain.entity` package.
+- Repositories live in `domain.repository`, separate from the entity subpackages — one repository per
   aggregate root, not per table.
 - JSON columns: map as `Map<String, Object>` with `@JdbcTypeCode(SqlTypes.JSON)` (Hibernate 6 native).
   Never map a JSON column as a raw `String` — Hibernate double-serializes it (escaped JSON string

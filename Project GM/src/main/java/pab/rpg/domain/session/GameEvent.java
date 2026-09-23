@@ -1,4 +1,4 @@
-package pab.rpg.domain.entity;
+package pab.rpg.domain.session;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,16 +10,19 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
-@Table(name = "relationship")
+@Table(name = "game_event")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-public class Relationship {
+public class GameEvent {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -29,17 +32,21 @@ public class Relationship {
     private UUID sessionId;
 
     @Column(nullable = false)
-    private UUID npcId;
+    private long sequence;
+
+    @Column(nullable = false, length = 60)
+    private String type;
+
+    private UUID actorId;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false, columnDefinition = "json")
+    private Map<String, Object> payload;
 
     @Column(nullable = false)
-    private int value;
+    private Instant worldTime;
 
     @Column(nullable = false)
-    private Instant updatedAt;
-
-    public void changeBy(int delta, Instant now) {
-        this.value += delta;
-        this.updatedAt = now;
-    }
+    private Instant createdAt;
 
 }

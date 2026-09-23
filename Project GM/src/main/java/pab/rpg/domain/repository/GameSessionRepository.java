@@ -1,6 +1,6 @@
 package pab.rpg.domain.repository;
 
-import pab.rpg.domain.entity.GameSession;
+import pab.rpg.domain.session.GameSession;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

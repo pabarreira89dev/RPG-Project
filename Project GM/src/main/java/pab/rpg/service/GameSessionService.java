@@ -1,7 +1,7 @@
 package pab.rpg.service;
 
 import pab.rpg.api.dto.CreateGameSessionCommand;
-import pab.rpg.domain.entity.GameSession;
+import pab.rpg.domain.session.GameSession;
 
 import java.util.List;
 import java.util.UUID;

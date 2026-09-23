@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import pab.rpg.domain.entity.GameEvent;
+import pab.rpg.domain.session.GameEvent;
 import pab.rpg.domain.repository.GameEventRepository;
 
 import java.time.Instant;

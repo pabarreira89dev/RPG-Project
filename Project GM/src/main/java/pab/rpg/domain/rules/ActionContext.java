@@ -1,6 +1,6 @@
 package pab.rpg.domain.rules;
 
-import pab.rpg.domain.entity.GameSession;
+import pab.rpg.domain.session.GameSession;
 
 import java.util.UUID;
 
