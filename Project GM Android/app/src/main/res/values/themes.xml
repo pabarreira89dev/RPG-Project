@@ -1,0 +1,4 @@
+<resources>
+    <!-- Platform window theme before Compose takes over; actual theming lives in ui/theme/Theme.kt. -->
+    <style name="Theme.ProjectGm" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
