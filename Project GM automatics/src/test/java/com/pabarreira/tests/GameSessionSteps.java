@@ -7,6 +7,8 @@ import com.pabarreira.tests.support.NpcCatalog;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
+import io.cucumber.java.es.Dado;
+import io.cucumber.java.es.Y;
 import io.restassured.RestAssured;
 import io.restassured.response.Response;
 
@@ -17,18 +19,11 @@ import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.both;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.lessThanOrEqualTo;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.*;
 
 public class GameSessionSteps {
 
+    private final Map<String, Integer> relationshipSnapshots = new HashMap<>();
     private String characterName;
     private int characterLevel;
     private UUID playerId;
@@ -38,7 +33,6 @@ public class GameSessionSteps {
     private String firstActionId;
     private UUID lastCombatId;
     private String lastCombatStatus;
-    private final Map<String, Integer> relationshipSnapshots = new HashMap<>();
     private Response response;
 
     @Given("un nuevo personaje llamado {string} de nivel {int}")
@@ -450,6 +444,13 @@ public class GameSessionSteps {
         consultarSesion(lastSessionId, playerId);
     }
 
+    @When("el jugador {string} consulta su sesión {string} de nuevo")
+    public void el_jugador_obtiene_su_sesion_de_nuevo(String playerId, String sessionId) {
+        consultarSesion(UUID.fromString(sessionId), UUID.fromString(playerId));
+        assertThat(response.statusCode(), equalTo(200));
+        lastSessionId = UUID.fromString(response.jsonPath().getString("sessionId"));
+    }
+
     @When("el jugador crea una sesión sin indicar identidad en la localización {string}")
     public void el_jugador_crea_una_sesion_sin_indicar_identidad_en_la_localizacion(String locationCode) {
         RestAssured.baseURI = ApiConfig.BASE_URI;
@@ -494,5 +495,15 @@ public class GameSessionSteps {
         response = given()
                 .when()
                 .get("/api/v1/sessions/{sessionId}", lastSessionId.toString());
+    }
+
+    @Dado("un personaje cuyo identificador es {string}")
+    public void unPersonajeCuyoIdentificadorEs(String playerId) {
+        this.playerId = UUID.fromString(playerId);
+    }
+
+    @Y("una sesión cuyo identificador es {string}")
+    public void unaSesionCuyoIdentificadorEs(String sessionId) {
+        this.lastSessionId = UUID.fromString(sessionId);
     }
 }
