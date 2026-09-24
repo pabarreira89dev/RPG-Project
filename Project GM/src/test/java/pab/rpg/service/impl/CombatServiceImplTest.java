@@ -29,6 +29,7 @@ import pab.rpg.domain.rules.Difficulty;
 import pab.rpg.domain.rules.ResultGrade;
 import pab.rpg.exception.CombatNotAllowedException;
 import pab.rpg.service.CombatService.CombatView;
+import pab.rpg.service.ConversationMemoryService;
 import pab.rpg.service.GameEventService;
 import pab.rpg.service.MasterAdapter;
 
@@ -64,11 +65,14 @@ class CombatServiceImplTest {
     private LocationRepository locationRepository;
     @Mock
     private MasterAdapter masterAdapter;
+    @Mock
+    private ConversationMemoryService conversationMemoryService;
 
     private CombatServiceImpl service() {
         return new CombatServiceImpl(
                 gameSessionRepository, characterRepository, npcRepository, combatRepository,
-                combatParticipantRepository, checkResolver, gameEventService, locationRepository, masterAdapter
+                combatParticipantRepository, checkResolver, gameEventService, locationRepository, masterAdapter,
+                conversationMemoryService
         );
     }
 

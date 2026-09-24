@@ -399,6 +399,24 @@ Endpoint nuevo `ItemController` en `/api/v1/sessions/{sessionId}/items` (mismo p
 
 Fuera de alcance deliberado de esta pasada (quedan como líneas propias de `MVP v0.3.md`): usar objetos en combate (el arma equipada no influye todavía en el daño — sigue la tabla fija por `ResultGrade`), "usar objeto" como acción de combate, soltar/transferir objetos, e interpretación de texto libre para recoger objetos (por ahora solo por `itemId` explícito, sin pasar por `MasterAdapter`). Test añadido: `ItemServiceImplTest` (mismo estilo Mockito que `NpcServiceImplTest`/`CombatServiceImplTest`). No ejecutado por mí en esta sesión (el usuario compila/testea manualmente); pendiente confirmar que compila y los tests pasan, y aplicar la migración `V7` a la BD local (Flyway la aplica sola al arrancar "Project GM").
 
+### Reorganización de paquetes de dominio (entre sesiones, sin fecha registrada)
+
+Entre la sesión del inventario y la de memoria de conversación, `pab.rpg.domain.entity` (paquete plano) se reorganizó en subpaquetes por feature: `domain.character` (Character/AttributeSet/HealthState), `domain.session` (GameSession/SessionStatus/GameEvent/ProcessedAction), `domain.world` (Location), `domain.npc` (Npc/NpcStatus/NpcKnowledgeFact/Relationship), `domain.quest` (Quest/QuestStage/QuestStageTransition/QuestState/QuestStatus), `domain.combat` (Combat/CombatParticipant/CombatStatus/CombatTeam/CombatParticipantStatus), `domain.item` (Item/ItemTemplate). `domain.repository` y `domain.rules` siguen planos, sin cambios. Ya documentado en `Project GM/docs-agent/coding-patterns.md`. Puramente un refactor de paquetes (mismos nombres de clase, mismo comportamiento) — no hecho por mí, descubierto al empezar la sesión de memoria de conversación.
+
+### MVP v0.3 — Memoria de conversación implementada (2026-09-24)
+
+Nueva entidad `pab.rpg.domain.memory.ConversationTurn` (paquete nuevo `domain.memory`, no existía en la reorganización anterior): por sesión, append-only, `sequence` (mismo patrón que `GameEvent`), `playerText`, `narration`, `createdAt`. Migración `V8__create_conversation_turn.sql` (`UNIQUE(session_id, sequence)`).
+
+`ConversationMemoryService`/`ConversationMemoryServiceImpl` (`pab.rpg.service`): `recordTurn(sessionId, playerText, narration)` (siguiente `sequence` igual que `GameEventServiceImpl`) y `summarizeRecent(sessionId)` (últimos 5 turnos vía `findTop5BySessionIdOrderBySequenceDesc`, invertidos a orden cronológico, formateados como `Jugador: ...\nMaster: ...` unidos por saltos de línea; `""` si la sesión no tiene turnos todavía).
+
+`MasterAdapter.NarrationRequest`/`InterpretationRequest` ganan un campo `recentConversation` (String) — rompe la firma posicional de ambos records, así que se actualizaron todos los call sites: `ActionServiceImpl` (interpret+narrate), `CombatServiceImpl.performAttack` (narrate), y los tests `OpenAiMasterAdapterTest`/`StubMasterAdapterTest` (constructores posicionales). `OpenAiMasterAdapter` añade `recentConversation` al prompt de `narrate`/`interpret` SOLO si no está en blanco (así la primera acción de una sesión nueva genera el mismo prompt que antes de este cambio); `StubMasterAdapter` lo ignora (determinista, no razona sobre historial).
+
+Dónde se graba un turno: `ActionServiceImpl` (después de narrar una acción libre, con `command.text()` como `playerText`) y `CombatServiceImpl.performAttack` (después de narrar un ataque, con `"<atacante> ataca a <objetivo>"` como `playerText`, tanto si el objetivo vino por IDs explícitos como por texto libre — se decidió grabar ambos casos por simplicidad, un único punto de llamada en el método de 4 argumentos que ya validan/resuelven el ataque). `QuestServiceImpl` no narra (nunca llamó a `MasterAdapter.narrate`), así que no graba turnos — sin cambios ahí.
+
+Tests: `ConversationMemoryServiceImplTest` nuevo (secuencia empieza en 1, se incrementa desde el último turno, resumen vacío sin historial, resumen en orden cronológico). `ActionServiceImplTest`/`CombatServiceImplTest` ganan un mock de `ConversationMemoryService` sin stubear (los tests existentes no verifican el resumen en sí). `OpenAiMasterAdapterTest` gana un test que verifica que `recentConversation` no vacío aparece en el cuerpo de la petición HTTP real a la Responses API (vía `MockRestServiceServer` + matcher de contenido).
+
+No ejecutado por mí en esta sesión (el usuario compila/testea manualmente); pendiente confirmar que compila, los tests pasan y aplicar la migración `V8` (Flyway la aplica sola al arrancar la app).
+
 ## Restricciones de colaboración
 
 - El usuario ejecuta manualmente compilación y pruebas.

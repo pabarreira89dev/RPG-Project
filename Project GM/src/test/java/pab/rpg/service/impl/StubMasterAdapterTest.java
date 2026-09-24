@@ -23,27 +23,27 @@ class StubMasterAdapterTest {
     @Test
     void narratesEachResultGradeInSpanish() {
         assertEquals("Tu intento tiene un éxito rotundo.",
-                adapter.narrate(new NarrationRequest("", "", ResultGrade.GRAN_EXITO, "")));
+                adapter.narrate(new NarrationRequest("", "", ResultGrade.GRAN_EXITO, "", "")));
         assertEquals("Tu intento sale bien.",
-                adapter.narrate(new NarrationRequest("", "", ResultGrade.EXITO, "")));
+                adapter.narrate(new NarrationRequest("", "", ResultGrade.EXITO, "", "")));
         assertEquals("Lo consigues, pero a cierto coste.",
-                adapter.narrate(new NarrationRequest("", "", ResultGrade.EXITO_CON_COSTE, "")));
+                adapter.narrate(new NarrationRequest("", "", ResultGrade.EXITO_CON_COSTE, "", "")));
         assertEquals("Tu intento no sale como esperabas.",
-                adapter.narrate(new NarrationRequest("", "", ResultGrade.FRACASO, "")));
+                adapter.narrate(new NarrationRequest("", "", ResultGrade.FRACASO, "", "")));
         assertEquals("Tu intento fracasa de forma grave.",
-                adapter.narrate(new NarrationRequest("", "", ResultGrade.FRACASO_GRAVE, "")));
+                adapter.narrate(new NarrationRequest("", "", ResultGrade.FRACASO_GRAVE, "", "")));
     }
 
     @Test
     void interpretsActionTypeFromKeywords() {
         assertEquals(ActionType.PHYSICAL,
-                adapter.interpret(new InterpretationRequest("", "Ataco al guardia", List.of())).actionType());
+                adapter.interpret(new InterpretationRequest("", "Ataco al guardia", List.of(), "")).actionType());
         assertEquals(ActionType.SOCIAL,
-                adapter.interpret(new InterpretationRequest("", "Hablo con el tabernero", List.of())).actionType());
+                adapter.interpret(new InterpretationRequest("", "Hablo con el tabernero", List.of(), "")).actionType());
         assertEquals(ActionType.INVESTIGATION,
-                adapter.interpret(new InterpretationRequest("", "Busco pistas en la sala", List.of())).actionType());
+                adapter.interpret(new InterpretationRequest("", "Busco pistas en la sala", List.of(), "")).actionType());
         assertEquals(ActionType.EXPLORATION,
-                adapter.interpret(new InterpretationRequest("", "Miro alrededor", List.of())).actionType());
+                adapter.interpret(new InterpretationRequest("", "Miro alrededor", List.of(), "")).actionType());
     }
 
     @Test
@@ -51,7 +51,7 @@ class StubMasterAdapterTest {
         UUID npcId = UUID.randomUUID();
         List<VisibleNpc> visibleNpcs = List.of(new VisibleNpc(npcId, "Aron"));
 
-        ActionIntent intent = adapter.interpret(new InterpretationRequest("", "Hablo con Aron", visibleNpcs));
+        ActionIntent intent = adapter.interpret(new InterpretationRequest("", "Hablo con Aron", visibleNpcs, ""));
 
         assertEquals(npcId, intent.targetNpcId());
     }
@@ -60,7 +60,7 @@ class StubMasterAdapterTest {
     void doesNotInventATargetWhenNoNpcIsMentioned() {
         List<VisibleNpc> visibleNpcs = List.of(new VisibleNpc(UUID.randomUUID(), "Aron"));
 
-        ActionIntent intent = adapter.interpret(new InterpretationRequest("", "Miro alrededor", visibleNpcs));
+        ActionIntent intent = adapter.interpret(new InterpretationRequest("", "Miro alrededor", visibleNpcs, ""));
 
         assertNull(intent.targetNpcId());
     }

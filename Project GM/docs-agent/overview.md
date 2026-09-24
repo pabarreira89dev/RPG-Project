@@ -23,7 +23,8 @@ Actuator.
 
 ## Responsibilities
 - Own and persist all game state (sessions, characters, locations, NPCs/relationships, quests, combat,
-  items/inventory, domain events) — MySQL via Flyway-versioned migrations (`V1`…`V7`).
+  items/inventory, conversation memory, domain events) — MySQL via Flyway-versioned migrations
+  (`V1`…`V8`).
 - Resolve player actions deterministically: attribute + difficulty → `CheckResolver` (d20-style roll) →
   `ResultGrade`, gated by pluggable `GameRule`s (e.g. actor alive, location exists, valid NPC target).
 - Run combat (initiative, turn order, attack resolution) and quest state machines (stage transitions).

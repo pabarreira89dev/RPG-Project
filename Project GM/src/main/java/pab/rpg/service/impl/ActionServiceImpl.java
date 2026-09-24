@@ -47,6 +47,7 @@ public class ActionServiceImpl implements ActionService {
     private final ObjectMapper objectMapper;
     private final LocationRepository locationRepository;
     private final MasterAdapter masterAdapter;
+    private final ConversationMemoryService conversationMemoryService;
     private final MeterRegistry meterRegistry;
 
     @Override
@@ -99,11 +100,13 @@ public class ActionServiceImpl implements ActionService {
 
         ActionType actionType = command.actionType();
         UUID targetNpcId = command.targetNpcId();
+        String recentConversation = conversationMemoryService.summarizeRecent(session.getId());
         if (actionType == null) {
             ActionIntent intent = masterAdapter.interpret(new InterpretationRequest(
                     sceneSummary(session.getCurrentLocationId()),
                     command.text(),
-                    visibleNpcs(session.getCurrentLocationId())
+                    visibleNpcs(session.getCurrentLocationId()),
+                    recentConversation
             ));
             actionType = intent.actionType();
             if (targetNpcId == null) {
@@ -153,12 +156,7 @@ public class ActionServiceImpl implements ActionService {
         ActionResponse response = new ActionResponse(
                 actionId,
                 "RESOLVED",
-                masterAdapter.narrate(new NarrationRequest(
-                        sceneSummary(session.getCurrentLocationId()),
-                        command.text(),
-                        resolution.grade(),
-                        String.join(", ", events)
-                )),
+                narrate(session, command.text(), resolution.grade(), String.join(", ", events), recentConversation),
                 new ActionResponse.ResultDetails(
                         resolution.grade().name(),
                         new ActionResponse.RollDetails(resolution.d20(), modifier, resolution.total(), resolution.difficulty().getValue())
@@ -236,5 +234,14 @@ public class ActionServiceImpl implements ActionService {
         return npcService.getNpcsAtLocation(locationId).stream()
                 .map(npc -> new VisibleNpc(npc.getId(), npc.getName()))
                 .toList();
+    }
+
+    // Narrates and records the turn in the same step so no caller can narrate without it entering memory.
+    private String narrate(GameSession session, String actionText, ResultGrade grade, String eventsSummary, String recentConversation) {
+        String narration = masterAdapter.narrate(new NarrationRequest(
+                sceneSummary(session.getCurrentLocationId()), actionText, grade, eventsSummary, recentConversation
+        ));
+        conversationMemoryService.recordTurn(session.getId(), actionText, narration);
+        return narration;
     }
 }

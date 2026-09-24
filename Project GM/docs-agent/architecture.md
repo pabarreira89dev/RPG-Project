@@ -32,9 +32,9 @@ flowchart TB
 - `api.dto.request` / `api.dto.response` — request/response records; `api.mapper` (MapStruct) converts
   request DTOs to service commands where mapping is non-trivial (e.g. `CreateSessionRequestMapper`).
 - `service` (interfaces) / `service.impl` — one interface per bounded capability (`GameSessionService`,
-  `ActionService`, `CombatService`, `QuestService`, `NpcService`, `ItemService`, `GameEventService`,
-  `IdempotencyService`) with a single impl each, injected by type (no multi-impl selection except
-  `MasterAdapter`).
+  `ActionService`, `CombatService`, `QuestService`, `NpcService`, `ItemService`,
+  `ConversationMemoryService`, `GameEventService`, `IdempotencyService`) with a single impl each,
+  injected by type (no multi-impl selection except `MasterAdapter`).
 - `domain.{session,character,combat,npc,quest,item,world}` / `domain.repository` — JPA entities, split
   into feature-cohesive subpackages directly under `domain` (protected no-args ctor, no public setters,
   behavior via intention-revealing methods e.g. `GameSession.advanceWorldTime`) and their Spring Data

@@ -24,6 +24,8 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.hamcrest.Matchers.containsString;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
@@ -59,7 +61,7 @@ class OpenAiMasterAdapterTest {
 
         OpenAiMasterAdapter adapter = new OpenAiMasterAdapter(properties, builder, objectMapper, meterRegistry);
 
-        String narration = adapter.narrate(new NarrationRequest("Plaza", "Hablo con el guardia", ResultGrade.EXITO, "[]"));
+        String narration = adapter.narrate(new NarrationRequest("Plaza", "Hablo con el guardia", ResultGrade.EXITO, "[]", ""));
 
         assertEquals("El guardia asiente y te deja pasar.", narration);
         server.verify();
@@ -76,7 +78,36 @@ class OpenAiMasterAdapterTest {
         OpenAiMasterAdapter adapter = new OpenAiMasterAdapter(properties, builder, objectMapper, meterRegistry);
 
         assertThrows(AiUnavailableException.class,
-                () -> adapter.narrate(new NarrationRequest("Plaza", "Hablo con el guardia", ResultGrade.EXITO, "[]")));
+                () -> adapter.narrate(new NarrationRequest("Plaza", "Hablo con el guardia", ResultGrade.EXITO, "[]", "")));
+    }
+
+    @Test
+    void narrateIncludesRecentConversationInPromptWhenPresent() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("https://fake-openai.test/v1/responses"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(content().string(containsString("El guardia te saluda")))
+                .andRespond(withSuccess("""
+                        {
+                          "output": [
+                            {
+                              "type": "message",
+                              "role": "assistant",
+                              "content": [
+                                { "type": "output_text", "text": "Sigues la conversación." }
+                              ]
+                            }
+                          ]
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        OpenAiMasterAdapter adapter = new OpenAiMasterAdapter(properties, builder, objectMapper, meterRegistry);
+
+        adapter.narrate(new NarrationRequest("Plaza", "Sigo hablando", ResultGrade.EXITO, "[]",
+                "Jugador: Hola\nMaster: El guardia te saluda."));
+
+        server.verify();
     }
 
     @Test
@@ -103,7 +134,7 @@ class OpenAiMasterAdapterTest {
         OpenAiMasterAdapter adapter = new OpenAiMasterAdapter(properties, builder, objectMapper, meterRegistry);
 
         ActionIntent intent = adapter.interpret(new InterpretationRequest(
-                "Plaza", "Hablo con el guardia", List.of(new VisibleNpc(npcId, "Guardia"))));
+                "Plaza", "Hablo con el guardia", List.of(new VisibleNpc(npcId, "Guardia")), ""));
 
         assertEquals(ActionType.SOCIAL, intent.actionType());
         assertEquals(npcId, intent.targetNpcId());
@@ -132,7 +163,7 @@ class OpenAiMasterAdapterTest {
 
         OpenAiMasterAdapter adapter = new OpenAiMasterAdapter(properties, builder, objectMapper, meterRegistry);
 
-        ActionIntent intent = adapter.interpret(new InterpretationRequest("Plaza", "Miro alrededor", List.of()));
+        ActionIntent intent = adapter.interpret(new InterpretationRequest("Plaza", "Miro alrededor", List.of(), ""));
 
         assertEquals(ActionType.EXPLORATION, intent.actionType());
         assertNull(intent.targetNpcId());

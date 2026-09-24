@@ -28,6 +28,8 @@ leaving room for a future multiplayer evolution.
 - AI narration and free-text interpretation, isolated behind the `MasterAdapter` interface so the AI can
   be swapped (OpenAI Responses API in `cloud`, a deterministic stub in `local`/`test`) without touching
   domain logic.
+- Short-term conversation memory: recent player/narration turns are summarized and fed back into the AI's
+  prompts, so narration/interpretation reasons with recent context instead of a single isolated action.
 - Authentication (JWT in `cloud`) and idempotent/concurrency-safe action submission.
 
 ## Current scope
@@ -35,7 +37,7 @@ Active development targets the `MVP v0.2` vertical slice (see `MVP v0.2.md`): 1 
 5 NPCs, 1 faction, 3 branching quests, basic turn-based combat. `MVP v0.1.md` describes the full
 long-term vision (5–10h campaign, multiple regions/factions/economy) which is explicitly **out of scope**
 for now. `MVP v0.3.md` tracks TDD items closed out of order (JWT, observability, E2E suite, basic
-inventory done; death rules, weapon damage, skill modifiers, etc. still pending).
+inventory, conversation memory done; death rules, weapon damage, skill modifiers, etc. still pending).
 
 ## Key stakeholders / actors
 - **Player** — the sole external actor for now; interacts only via the HTTP API (no first-party client

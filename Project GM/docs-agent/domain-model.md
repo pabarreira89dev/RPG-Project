@@ -79,7 +79,21 @@ last_reviewed: null
 - `ProcessedAction` — backs `IdempotencyService`: a repeated `idempotencyKey` on `POST .../actions`
   returns the original result instead of re-resolving.
 
+## Conversation memory
+- `ConversationTurn` (`domain.memory`) — per-session, append-only `playerText`+`narration` pair, ordered
+  by its own `sequence` (same pattern as `GameEvent`, but a separate table: this is short natural-language
+  history for the AI prompt, not the structured/auditable event log).
+- `ConversationMemoryService.recordTurn` is called right after `MasterAdapter.narrate` succeeds, in
+  `ActionServiceImpl` (free-text actions) and `CombatServiceImpl.performAttack` (combat narration) — the
+  two call sites that produce a natural-language narration. Quest advancement doesn't narrate, so it
+  doesn't record a turn.
+- `summarizeRecent(sessionId)` returns "" when the session has no prior turns, otherwise the last 5 turns
+  formatted chronologically as `Jugador: ...\nMaster: ...`. Passed as `recentConversation` on both
+  `MasterAdapter.NarrationRequest` and `InterpretationRequest`; `OpenAiMasterAdapter` appends it to the
+  prompt only when non-blank (so a brand-new session's first turn is unchanged); `StubMasterAdapter`
+  ignores it (deterministic, no reasoning over history).
+
 ## Deliberately out of scope for now (see `MVP v0.3.md`)
 Weapon/item influence on combat damage, skill/circumstance modifiers (parameters exist on
 `CheckResolver.resolve` but callers always pass 0), combat beyond "attack", death/`DOWNED`→stabilize
-rules, conversation memory, OpenAI retry/backoff, per-user usage limits.
+rules, OpenAI retry/backoff, per-user usage limits.

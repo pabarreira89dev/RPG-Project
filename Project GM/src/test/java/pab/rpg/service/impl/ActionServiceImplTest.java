@@ -25,6 +25,7 @@ import pab.rpg.exception.StaleSessionVersionException;
 import pab.rpg.service.GameEventService;
 import pab.rpg.service.GameSessionService;
 import pab.rpg.service.IdempotencyService;
+import pab.rpg.service.ConversationMemoryService;
 import pab.rpg.service.MasterAdapter;
 import pab.rpg.service.NpcService;
 
@@ -63,6 +64,8 @@ class ActionServiceImplTest {
     private LocationRepository locationRepository;
     @Mock
     private MasterAdapter masterAdapter;
+    @Mock
+    private ConversationMemoryService conversationMemoryService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
@@ -70,7 +73,7 @@ class ActionServiceImplTest {
     private ActionServiceImpl service() {
         return new ActionServiceImpl(
                 gameSessionService, gameSessionRepository, gameEventService, idempotencyService, checkResolver,
-                List.of(), npcService, objectMapper, locationRepository, masterAdapter, meterRegistry
+                List.of(), npcService, objectMapper, locationRepository, masterAdapter, conversationMemoryService, meterRegistry
         );
     }
 

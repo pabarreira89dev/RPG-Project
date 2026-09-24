@@ -21,6 +21,7 @@ last_reviewed: null
 | NPCs & relationships | provider | provides:rest GET /api/v1/sessions/{sessionId}/npcs | NpcController.java, NpcServiceImpl.java | — |
 | Inventory & items | provider | provides:rest GET /api/v1/sessions/{sessionId}/items \| provides:rest POST /api/v1/sessions/{sessionId}/items/{itemId}/pick-up | ItemController.java, ItemServiceImpl.java | — |
 | AI narration & free-text interpretation | participant | internal (invoked by the action/combat/quest endpoints above, no dedicated route) | MasterAdapter.java, OpenAiMasterAdapter.java, StubMasterAdapter.java | — |
+| Conversation memory | standalone | internal (feeds `MasterAdapter.narrate`/`interpret` via `recentConversation`, no dedicated route) | ConversationMemoryServiceImpl.java, ConversationTurn.java | — |
 | Authentication & player identity | library | internal (cross-cutting filter chain, not a functional endpoint) | SecurityConfig.java, DevelopmentIdentityFilter.java, CurrentPlayerArgumentResolver.java | — |
 | Observability | standalone | internal | CorrelationIdFilter.java, logback-spring.xml | — |
 | Idempotency & concurrency control | standalone | internal | IdempotencyServiceImpl.java, ProcessedAction.java | — |

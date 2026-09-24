@@ -18,7 +18,7 @@ No other repo in this workspace depends on Project GM; it is the only backend se
 ## External dependencies
 | Dependency | Used for | Notes |
 |------------|----------|-------|
-| MySQL 8 (`mysql-connector-j`, `flyway-mysql`) | System of record, schema managed by Flyway (`V1`-`V7` under `src/main/resources/db/migration`) | Local dev DB `project_gm_local`, test DB `project_gm_test`, both need the `project_gm_user` role. No Postgres anymore (migrated 2026-09-20). |
+| MySQL 8 (`mysql-connector-j`, `flyway-mysql`) | System of record, schema managed by Flyway (`V1`-`V8` under `src/main/resources/db/migration`) | Local dev DB `project_gm_local`, test DB `project_gm_test`, both need the `project_gm_user` role. No Postgres anymore (migrated 2026-09-20). |
 | OpenAI Responses API (`POST {openai.base-url}/responses`) | Narration + free-text interpretation, only when `openai.enabled=true` | Isolated behind `MasterAdapter`/`OpenAiMasterAdapter`; disabled (stubbed) in `test`, opt-out in `local` via `OPENAI_ENABLED=false`. Network/parsing failures raise `AiUnavailableException` → 503 `OPENAI_UNAVAILABLE`. |
 | External JWT issuer (`cloud` only) | Authentication | `JWT_ISSUER_URI` + `JWT_AUDIENCE`; validated via `NimbusJwtDecoder` + `DelegatingOAuth2TokenValidator` (issuer + `aud` claim). No IdP is run by this repo. |
 | Spring Boot Actuator | Health/metrics (+ `shutdown`, `local` only) | `/actuator/**` is `permitAll()` regardless of profile. |

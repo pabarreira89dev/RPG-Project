@@ -26,6 +26,7 @@ import pab.rpg.domain.rules.ResultGrade;
 import pab.rpg.exception.CombatNotAllowedException;
 import pab.rpg.exception.CombatNotFoundException;
 import pab.rpg.service.CombatService;
+import pab.rpg.service.ConversationMemoryService;
 import pab.rpg.service.GameEventService;
 import pab.rpg.service.MasterAdapter;
 import pab.rpg.service.MasterAdapter.NarrationRequest;
@@ -57,6 +58,7 @@ public class CombatServiceImpl implements CombatService {
     private final GameEventService gameEventService;
     private final LocationRepository locationRepository;
     private final MasterAdapter masterAdapter;
+    private final ConversationMemoryService conversationMemoryService;
     private final SecureRandom initiativeRandom = new SecureRandom();
 
     @Override
@@ -172,12 +174,15 @@ public class CombatServiceImpl implements CombatService {
         }
         combatRepository.save(combat);
 
+        String attackText = attacker.getName() + " ataca a " + target.getName();
         String narration = masterAdapter.narrate(new NarrationRequest(
                 sceneSummary(session.getCurrentLocationId()),
-                attacker.getName() + " ataca a " + target.getName(),
+                attackText,
                 resolution.grade(),
-                "daño=" + damage + ", estado objetivo=" + target.getStatus()
+                "daño=" + damage + ", estado objetivo=" + target.getStatus(),
+                conversationMemoryService.summarizeRecent(sessionId)
         ));
+        conversationMemoryService.recordTurn(sessionId, attackText, narration);
 
         return toView(combat, participants, narration);
     }

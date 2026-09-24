@@ -21,10 +21,14 @@ public interface MasterAdapter {
     // (e.g. NpcTargetRule for NPCs, findParticipant for combat, the transition lookup for quests).
     String selectCandidate(CandidateSelectionRequest request);
 
-    record NarrationRequest(String sceneSummary, String actionText, ResultGrade grade, String eventsSummary) {
+    record NarrationRequest(String sceneSummary, String actionText, ResultGrade grade, String eventsSummary,
+                             String recentConversation) {
     }
 
-    record InterpretationRequest(String sceneSummary, String playerText, List<VisibleNpc> visibleNpcs) {
+    // recentConversation is ConversationMemoryService.summarizeRecent(sessionId): "" when the session
+    // has no prior turns yet, otherwise a chronological "Jugador: ...\nMaster: ..." summary (TDD §10/§11).
+    record InterpretationRequest(String sceneSummary, String playerText, List<VisibleNpc> visibleNpcs,
+                                  String recentConversation) {
     }
 
     record VisibleNpc(UUID id, String name) {

@@ -256,7 +256,8 @@ public class OpenAiMasterAdapter implements MasterAdapter {
                 Escena: %s
                 Acción del jugador: %s
                 Resultado del motor: %s
-                Eventos: %s""".formatted(request.sceneSummary(), request.actionText(), request.grade(), request.eventsSummary());
+                Eventos: %s%s""".formatted(request.sceneSummary(), request.actionText(), request.grade(),
+                request.eventsSummary(), recentConversationSuffix(request.recentConversation()));
     }
 
     private String buildInterpretationPrompt(InterpretationRequest request) {
@@ -267,7 +268,17 @@ public class OpenAiMasterAdapter implements MasterAdapter {
                 Escena: %s
                 NPCs visibles (id: nombre):
                 %s
-                Texto del jugador: %s""".formatted(request.sceneSummary(), npcList, request.playerText());
+                Texto del jugador: %s%s""".formatted(request.sceneSummary(), npcList, request.playerText(),
+                recentConversationSuffix(request.recentConversation()));
+    }
+
+    // Kept out of both prompts entirely (rather than an empty "Conversación reciente:" line) when there's
+    // no history yet, so a brand-new session's first turn looks identical to before this field existed.
+    private String recentConversationSuffix(String recentConversation) {
+        if (recentConversation == null || recentConversation.isBlank()) {
+            return "";
+        }
+        return "\nConversación reciente:\n" + recentConversation;
     }
 
     // The Responses API returns text nested in output[].content[]; there is no flat "outputText"
