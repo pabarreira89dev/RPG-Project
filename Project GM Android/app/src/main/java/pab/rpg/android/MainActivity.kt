@@ -12,14 +12,14 @@ import androidx.navigation.navArgument
 import pab.rpg.android.network.ApiClient
 import pab.rpg.android.ui.login.LoginScreen
 import pab.rpg.android.ui.login.RegisterScreen
-import pab.rpg.android.ui.sessions.SessionDetailScreen
+import pab.rpg.android.ui.narration.NarrationScreen
 import pab.rpg.android.ui.sessions.SessionListScreen
 import pab.rpg.android.ui.theme.ProjectGmTheme
 
 private const val ROUTE_LOGIN = "login"
 private const val ROUTE_REGISTER = "register"
 private const val ROUTE_SESSIONS = "sessions"
-private const val ROUTE_SESSION_DETAIL = "sessionDetail/{sessionId}"
+private const val ROUTE_NARRATION = "narration/{sessionId}"
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,15 +50,15 @@ class MainActivity : ComponentActivity() {
                     }
                     composable(ROUTE_SESSIONS) {
                         SessionListScreen(
-                            onSessionClick = { sessionId -> navController.navigate("sessionDetail/$sessionId") }
+                            onSessionClick = { sessionId -> navController.navigate("narration/$sessionId") }
                         )
                     }
                     composable(
-                        ROUTE_SESSION_DETAIL,
+                        ROUTE_NARRATION,
                         arguments = listOf(navArgument("sessionId") { type = NavType.StringType })
                     ) { backStackEntry ->
                         val sessionId = backStackEntry.arguments?.getString("sessionId").orEmpty()
-                        SessionDetailScreen(sessionId = sessionId, onBack = { navController.popBackStack() })
+                        NarrationScreen(sessionId = sessionId, onBack = { navController.popBackStack() })
                     }
                 }
             }
