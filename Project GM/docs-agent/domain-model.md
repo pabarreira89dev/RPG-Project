@@ -12,7 +12,8 @@ last_reviewed: null
 
 ## Session & character (per-session, mutable)
 - `GameSession` — `id`, `playerId`, `worldId`, `currentLocationId`, `status` (`SessionStatus`),
-  `worldTime`, optimistic-lock `version`, owns one `Character` (`@OneToOne`, cascade all).
+  `worldTime`, optimistic-lock `version`, owns one `Character` (`@OneToOne`, cascade all), nullable
+  `deletedAt` (soft delete — set via `softDelete()`, excluded from listing/lookup by player).
 - `Character` — `name`, `level`, `experience`, embedded `AttributeSet` (6 attributes below), embedded
   `HealthState` (`maximum`/`current`/`wounds`).
 

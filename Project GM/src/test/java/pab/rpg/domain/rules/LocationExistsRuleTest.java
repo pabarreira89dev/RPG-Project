@@ -33,7 +33,7 @@ class LocationExistsRuleTest {
         );
         return new GameSession(
                 UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), locationId,
-                SessionStatus.ACTIVE, Instant.parse("2026-01-01T08:00:00Z"), 0L, character
+                SessionStatus.ACTIVE, Instant.parse("2026-01-01T08:00:00Z"), 0L, character, null
         );
     }
 

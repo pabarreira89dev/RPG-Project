@@ -16,8 +16,9 @@ last_reviewed: null
 | Method | Path | Purpose |
 |--------|------|---------|
 | `POST` | `/sessions` | Create a session for the current player (body: `CreateSessionRequest`, no `playerId` field) |
-| `GET` | `/sessions/{sessionId}` | Get a session — 404 if it belongs to another player |
-| `GET` | `/sessions` | List the current player's sessions |
+| `GET` | `/sessions/{sessionId}` | Get a session — 404 if it belongs to another player or is soft-deleted |
+| `GET` | `/sessions` | List the current player's sessions (excludes soft-deleted ones) |
+| `DELETE` | `/sessions/{sessionId}` | Soft-delete a session (sets `deletedAt`) — 204, or 404 if it belongs to another player / doesn't exist / is already deleted |
 
 ## Actions — `ActionController`
 | Method | Path | Purpose |

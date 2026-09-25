@@ -4,16 +4,22 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import pab.rpg.android.network.ApiClient
-import pab.rpg.android.ui.login.AuthScreen
 import pab.rpg.android.ui.login.LoginScreen
 import pab.rpg.android.ui.login.RegisterScreen
+import pab.rpg.android.ui.sessions.SessionDetailScreen
 import pab.rpg.android.ui.sessions.SessionListScreen
 import pab.rpg.android.ui.theme.ProjectGmTheme
+
+private const val ROUTE_LOGIN = "login"
+private const val ROUTE_REGISTER = "register"
+private const val ROUTE_SESSIONS = "sessions"
+private const val ROUTE_SESSION_DETAIL = "sessionDetail/{sessionId}"
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,20 +27,39 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            var loggedIn by remember { mutableStateOf(ApiClient.authSessionManager.isLoggedIn()) }
-            var authScreen by remember { mutableStateOf<AuthScreen>(AuthScreen.Login) }
+            val navController = rememberNavController()
+            val startDestination = if (ApiClient.authSessionManager.isLoggedIn()) ROUTE_SESSIONS else ROUTE_LOGIN
 
             ProjectGmTheme {
-                when {
-                    loggedIn -> SessionListScreen()
-                    authScreen is AuthScreen.Register -> RegisterScreen(
-                        onRegistered = { authScreen = AuthScreen.Login },
-                        onBackToLogin = { authScreen = AuthScreen.Login }
-                    )
-                    else -> LoginScreen(
-                        onLoginSuccess = { loggedIn = true },
-                        onNavigateToRegister = { authScreen = AuthScreen.Register }
-                    )
+                NavHost(navController = navController, startDestination = startDestination) {
+                    composable(ROUTE_LOGIN) {
+                        LoginScreen(
+                            onLoginSuccess = {
+                                navController.navigate(ROUTE_SESSIONS) {
+                                    popUpTo(ROUTE_LOGIN) { inclusive = true }
+                                }
+                            },
+                            onNavigateToRegister = { navController.navigate(ROUTE_REGISTER) }
+                        )
+                    }
+                    composable(ROUTE_REGISTER) {
+                        RegisterScreen(
+                            onRegistered = { navController.popBackStack() },
+                            onBackToLogin = { navController.popBackStack() }
+                        )
+                    }
+                    composable(ROUTE_SESSIONS) {
+                        SessionListScreen(
+                            onSessionClick = { sessionId -> navController.navigate("sessionDetail/$sessionId") }
+                        )
+                    }
+                    composable(
+                        ROUTE_SESSION_DETAIL,
+                        arguments = listOf(navArgument("sessionId") { type = NavType.StringType })
+                    ) { backStackEntry ->
+                        val sessionId = backStackEntry.arguments?.getString("sessionId").orEmpty()
+                        SessionDetailScreen(sessionId = sessionId, onBack = { navController.popBackStack() })
+                    }
                 }
             }
         }

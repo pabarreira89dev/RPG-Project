@@ -37,10 +37,10 @@ class SessionListViewModel(
         }
     }
 
-    fun createSession() {
+    fun createSession(characterName: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            repository.createSession(CreateSessionRequest.newCharacter())
+            repository.createSession(CreateSessionRequest.newCharacter(characterName = characterName))
                 .onSuccess { loadSessions() }
                 .onFailure { error -> _uiState.update { it.copy(isLoading = false, errorMessage = error.toUserMessage()) } }
         }

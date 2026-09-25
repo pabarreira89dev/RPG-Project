@@ -54,8 +54,14 @@ public class GameSession {
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, optional = false)
     private Character character;
 
+    private Instant deletedAt;
+
     public void advanceWorldTime(Duration duration) {
         this.worldTime = this.worldTime.plus(duration);
+    }
+
+    public void softDelete(Instant deletedAt) {
+        this.deletedAt = deletedAt;
     }
 
 }

@@ -9,7 +9,7 @@ import java.util.UUID;
 
 public interface GameSessionRepository extends JpaRepository<GameSession, UUID> {
 
-    List<GameSession> findAllByPlayerIdOrderByWorldTimeDesc(UUID playerId);
+    List<GameSession> findAllByPlayerIdAndDeletedAtIsNullOrderByWorldTimeDesc(UUID playerId);
 
-    Optional<GameSession> findByIdAndPlayerId(UUID id, UUID playerId);
+    Optional<GameSession> findByIdAndPlayerIdAndDeletedAtIsNull(UUID id, UUID playerId);
 }

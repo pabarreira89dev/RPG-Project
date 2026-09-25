@@ -58,7 +58,8 @@ public class GameSessionServiceImpl implements GameSessionService {
                 SessionStatus.ACTIVE,
                 command.worldTime() == null ? Instant.now() : command.worldTime(),
                 0L,
-                character
+                character,
+                null
         );
 
         session = gameSessionRepository.save(session);
@@ -82,7 +83,7 @@ public class GameSessionServiceImpl implements GameSessionService {
 
         LOG.info("Retrieving game session with id={} for playerId={}", sessionId, playerId);
 
-        GameSession session = gameSessionRepository.findByIdAndPlayerId(sessionId, playerId)
+        GameSession session = gameSessionRepository.findByIdAndPlayerIdAndDeletedAtIsNull(sessionId, playerId)
                 .orElseThrow(() -> new SessionNotFoundException(sessionId, playerId));
         meterRegistry.counter("pab.rpg.sessions.retrieved").increment();
         return session;
@@ -95,7 +96,21 @@ public class GameSessionServiceImpl implements GameSessionService {
 
         LOG.info("Retrieving all game sessions for playerId={}", playerId);
 
-        return gameSessionRepository.findAllByPlayerIdOrderByWorldTimeDesc(playerId);
+        return gameSessionRepository.findAllByPlayerIdAndDeletedAtIsNullOrderByWorldTimeDesc(playerId);
+    }
+
+    @Override
+    public void deleteSession(UUID sessionId, UUID playerId) {
+        Objects.requireNonNull(sessionId, "sessionId must not be null");
+        Objects.requireNonNull(playerId, "playerId must not be null");
+
+        LOG.info("Deleting game session with id={} for playerId={}", sessionId, playerId);
+
+        GameSession session = gameSessionRepository.findByIdAndPlayerIdAndDeletedAtIsNull(sessionId, playerId)
+                .orElseThrow(() -> new SessionNotFoundException(sessionId, playerId));
+        session.softDelete(Instant.now());
+        gameSessionRepository.save(session);
+        meterRegistry.counter("pab.rpg.sessions.deleted").increment();
     }
 
     private void validate(CreateGameSessionCommand command) {

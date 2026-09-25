@@ -13,4 +13,6 @@ public interface GameSessionService {
     GameSession getSession(UUID sessionId, UUID playerId);
 
     List<GameSession> getSessions(UUID playerId);
+
+    void deleteSession(UUID sessionId, UUID playerId);
 }
