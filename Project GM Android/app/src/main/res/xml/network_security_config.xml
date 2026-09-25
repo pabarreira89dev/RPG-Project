@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Allows plaintext HTTP only to the local dev backend (emulator loopback); cloud profile will use HTTPS + JWT. -->
+<!-- Allows plaintext HTTP only to the local dev backend: "localhost" (real device via "adb reverse", or
+     emulator) and "10.0.2.2" (emulator loopback, kept as a fallback); cloud deploys will use HTTPS + JWT. -->
 <network-security-config>
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="false">10.0.2.2</domain>

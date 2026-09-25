@@ -39,7 +39,7 @@ Actuator.
 - Does not decide narrative outcomes with AI — `MasterAdapter` only narrates an already-resolved
   `ResultGrade` or proposes a candidate that the engine still validates.
 - Does not manage its own JWT identity provider in `cloud` — expects an external issuer
-  (`JWT_ISSUER_URI`/`JWT_AUDIENCE`).
+  (`JWT_ISSUER_URI`/`JWT_AUDIENCE`), namely `Project GM Auth`.
 
 ## Entry points
 - `pab.rpg.Application` — `@SpringBootApplication` + `@ConfigurationPropertiesScan` main class.

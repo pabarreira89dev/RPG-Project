@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+logging:
+  level:
+    pab.rpg.auth: DEBUG
+
+# Local manual testing: point Project GM Android's "cloud" flavor and Project GM's own "cloud" profile
+# (run locally) at this same instance to dry-run the whole contract before any real deployment exists.
+auth:
+  issuer-uri: http://localhost:9000
+  audience: project-gm-api
+  # Not a real secret in local (same reasoning as the fixed dev identity elsewhere in this workspace) —
+  # only gates the custom password grant's client auth, see AuthProperties.
+  android-client-secret: "local-dev-secret-change-me"
+  # jwk-private-key-pem / jwk-public-key-pem left unset on purpose: JwkConfig generates an ephemeral
+  # RSA keypair at startup instead. Fine for local dev (restarting already forces re-login regardless,
+  # since the in-memory OAuth2AuthorizationService is wiped too).

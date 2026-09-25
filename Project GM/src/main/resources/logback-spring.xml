@@ -10,10 +10,10 @@
             <includeMdcKeyName>sessionId</includeMdcKeyName>
             <fieldNames>
                 <timestamp>timestamp</timestamp>
+                <level>level</level>
                 <message>message</message>
                 <logger>logger</logger>
                 <thread>thread</thread>
-                <level>level</level>
             </fieldNames>
         </encoder>
     </appender>

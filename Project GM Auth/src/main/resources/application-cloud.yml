@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: ${DATABASE_POOL_MAX_SIZE:10}
+      minimum-idle: ${DATABASE_POOL_MIN_IDLE:2}
+
+# issuer-uri/audience here MUST match Project GM's JWT_ISSUER_URI/JWT_AUDIENCE cloud env vars exactly
+# (see Project GM/src/main/resources/application-cloud.yml) — that's the entire trust contract between
+# the two services, there is no other coupling.
+auth:
+  issuer-uri: ${AUTH_ISSUER_URI}
+  audience: ${AUTH_JWT_AUDIENCE}
+  android-client-secret: ${AUTH_ANDROID_CLIENT_SECRET}
+  jwk-private-key-pem: ${AUTH_JWK_PRIVATE_KEY_PEM}
+  jwk-public-key-pem: ${AUTH_JWK_PUBLIC_KEY_PEM}

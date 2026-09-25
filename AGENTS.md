@@ -23,15 +23,16 @@ Start at [`docs/index.md`](docs/index.md) — it routes you to the right file fo
 ## Repositories in this workspace
 
 Unlike the generic multi-repo template this context layer is based on (see `templates/README.md` §3),
-both repositories here are plain subfolders of the same workspace/git repo — not independent clones
+these repositories are plain subfolders of the same workspace/git repo — not independent clones
 under a gitignored `repos/` folder. There is nothing to rehydrate/clone.
 
 | Repo | Anchor | Purpose |
 |------|--------|---------|
 | [`Project GM/`](Project%20GM/AGENTS.md) | `Project GM/AGENTS.md` | Spring Boot game engine + API |
 | [`Project GM automatics/`](Project%20GM%20automatics/AGENTS.md) | `Project GM automatics/AGENTS.md` | Cucumber/REST Assured E2E suite |
+| [`Project GM Auth/`](Project%20GM%20Auth/AGENTS.md) | `Project GM Auth/AGENTS.md` | Spring Authorization Server issuing JWTs for Project GM's `cloud` profile |
 
-Before changing files in either repo, read its `AGENTS.md` and `docs-agent/index.md` first.
+Before changing files in any repo, read its `AGENTS.md` and `docs-agent/index.md` first.
 
 ---
 

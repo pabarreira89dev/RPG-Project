@@ -12,15 +12,16 @@ last_reviewed: null
 | Depends on | Direction | Why |
 |------------|-----------|-----|
 | `Project GM automatics/` | consumed by (not a dependency of this repo) | Separate Maven project; drives this app's HTTP API as a black box (Cucumber + REST Assured). Restarts this app's real process (`AppLifecycle`, via `/actuator/shutdown` + relaunching `mvn spring-boot:run`) to verify persistence across restarts. Changing an endpoint's request/response shape or auth header here requires updating its step definitions (`GameSessionSteps.java`) too. |
+| `Project GM Auth/` | depends on (`cloud` profile only) | This repo's `SecurityConfig.jwtDecoder()` fetches `Project GM Auth`'s OIDC/OAuth2 discovery document + JWKS to validate JWT signatures, and validates the `aud` claim it issues. No direct HTTP call between the two besides that metadata/JWKS fetch — this repo never calls `Project GM Auth`'s endpoints, and `local`/`test` don't use it at all (`DevelopmentIdentityFilter` instead). |
 
-No other repo in this workspace depends on Project GM; it is the only backend service.
+No other repo in this workspace depends on Project GM.
 
 ## External dependencies
 | Dependency | Used for | Notes |
 |------------|----------|-------|
 | MySQL 8 (`mysql-connector-j`, `flyway-mysql`) | System of record, schema managed by Flyway (`V1`-`V8` under `src/main/resources/db/migration`) | Local dev DB `project_gm_local`, test DB `project_gm_test`, both need the `project_gm_user` role. No Postgres anymore (migrated 2026-09-20). |
 | OpenAI Responses API (`POST {openai.base-url}/responses`) | Narration + free-text interpretation, only when `openai.enabled=true` | Isolated behind `MasterAdapter`/`OpenAiMasterAdapter`; disabled (stubbed) in `test`, opt-out in `local` via `OPENAI_ENABLED=false`. Network/parsing failures raise `AiUnavailableException` → 503 `OPENAI_UNAVAILABLE`. |
-| External JWT issuer (`cloud` only) | Authentication | `JWT_ISSUER_URI` + `JWT_AUDIENCE`; validated via `NimbusJwtDecoder` + `DelegatingOAuth2TokenValidator` (issuer + `aud` claim). No IdP is run by this repo. |
+| JWT issuer (`cloud` only) | Authentication | `JWT_ISSUER_URI` + `JWT_AUDIENCE`; validated via `NimbusJwtDecoder` + `DelegatingOAuth2TokenValidator` (issuer + `aud` claim). The issuer is `Project GM Auth` (see above) — this repo does not run its own IdP. |
 | Spring Boot Actuator | Health/metrics (+ `shutdown`, `local` only) | `/actuator/**` is `permitAll()` regardless of profile. |
 
 ## Events / integration points

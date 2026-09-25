@@ -1,5 +1,6 @@
 package pab.rpg.android.network
 
+import android.content.Context
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -12,9 +13,19 @@ object ApiClient {
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    lateinit var authSessionManager: AuthSessionManager
+        private set
+
+    fun init(context: Context) {
+        if (::authSessionManager.isInitialized) return
+        authSessionManager = AuthSessionManagerProvider.create(context.applicationContext)
+    }
+
     private val okHttpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .addInterceptor(DevIdentityInterceptor())
+            .addInterceptor(AuthInterceptor(authSessionManager))
+            .authenticator(AuthAuthenticator(authSessionManager))
             .apply {
                 if (BuildConfig.DEBUG) {
                     addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC })
@@ -32,3 +43,4 @@ object ApiClient {
             .create(GameApi::class.java)
     }
 }
+

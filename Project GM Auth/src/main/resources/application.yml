@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: project_gm_auth
+  profiles:
+    default: local
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Flyway owns the schema; Hibernate must only validate it, never auto-create/alter tables.
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        type:
+          preferred_uuid_jdbc_type: CHAR
+
+  flyway:
+    enabled: true
+
+server:
+  port: 9000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+auth:
+  android-client-id: project-gm-android
+  access-token-ttl-minutes: 30
+  refresh-token-ttl-days: 30

@@ -13,7 +13,7 @@ last_reviewed: null
 |---------|----------|----------|--------|-------|
 | `local` (default) | Manual dev runs | `DevelopmentIdentityFilter`, fixed UUID `00000000-0000-0000-0000-000000000001` unless header `X-Dev-Player-Id` overrides it | Real, `OPENAI_ENABLED` required (no default) | `/actuator/shutdown` enabled — used by the E2E suite's real-restart test |
 | `test` | `mvn test` in this repo | Same dev bypass, same fixed UUID | Always disabled (`StubMasterAdapter`) | Deterministic, no network |
-| `cloud` | Deployed environments | Real JWT (`JWT_ISSUER_URI`+`JWT_AUDIENCE`), `playerId` = `sub` claim | Real, no default for any secret | `/actuator/shutdown` intentionally NOT exposed |
+| `cloud` | Deployed environments | Real JWT issued by `Project GM Auth` (`JWT_ISSUER_URI`+`JWT_AUDIENCE`), `playerId` = `sub` claim (the account's own UUID, not derived from anything in this repo) | Real, no default for any secret | `/actuator/shutdown` intentionally NOT exposed |
 
 Base `application.yml` sets safe defaults (`security.development-user-enabled: false`, Flyway-managed
 schema with `ddl-auto: validate`, context path `/project_gm`).
@@ -24,7 +24,9 @@ schema with `ddl-auto: validate`, context path `/project_gm`).
   `OPENAI_CONNECT_TIMEOUT`, `OPENAI_READ_TIMEOUT`.
 - `cloud`: `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `OPENAI_API_KEY`, `OPENAI_MODEL`,
   `JWT_ISSUER_URI`, `JWT_AUDIENCE` (most others have safe defaults in this profile, e.g.
-  `OPENAI_ENABLED:true`, `OPENAI_BASE_URL`, timeouts, pool sizes).
+  `OPENAI_ENABLED:true`, `OPENAI_BASE_URL`, timeouts, pool sizes). `JWT_ISSUER_URI`/`JWT_AUDIENCE` must
+  exactly match `Project GM Auth`'s own `AUTH_ISSUER_URI`/`AUTH_JWT_AUDIENCE` — see
+  [`Project GM Auth/docs-agent/env-and-config.md`](../../Project%20GM%20Auth/docs-agent/env-and-config.md).
 - `test`: nothing required — `application-test.yml` hardcodes DB creds/URL with an overridable
   `TEST_DATABASE_URL` default, and OpenAI is always disabled.
 
