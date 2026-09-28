@@ -15,6 +15,7 @@ import pab.rpg.android.ui.login.LoginScreen
 import pab.rpg.android.ui.login.RegisterScreen
 import pab.rpg.android.ui.narration.NarrationScreen
 import pab.rpg.android.ui.npcs.NpcsScreen
+import pab.rpg.android.ui.quests.QuestsScreen
 import pab.rpg.android.ui.sessions.SessionListScreen
 import pab.rpg.android.ui.theme.ProjectGmTheme
 
@@ -24,6 +25,7 @@ private const val ROUTE_SESSIONS = "sessions"
 private const val ROUTE_NARRATION = "narration/{sessionId}"
 private const val ROUTE_NPCS = "npcs/{sessionId}"
 private const val ROUTE_INVENTORY = "inventory/{sessionId}"
+private const val ROUTE_QUESTS = "quests/{sessionId}"
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,7 +74,8 @@ class MainActivity : ComponentActivity() {
                             sessionId = sessionId,
                             onBack = { navController.popBackStack() },
                             onNavigateToNpcs = { navController.navigate("npcs/$sessionId") },
-                            onNavigateToInventory = { navController.navigate("inventory/$sessionId") }
+                            onNavigateToInventory = { navController.navigate("inventory/$sessionId") },
+                            onNavigateToQuests = { navController.navigate("quests/$sessionId") }
                         )
                     }
                     composable(
@@ -88,6 +91,13 @@ class MainActivity : ComponentActivity() {
                     ) { backStackEntry ->
                         val sessionId = backStackEntry.arguments?.getString("sessionId").orEmpty()
                         InventoryScreen(sessionId = sessionId, onBack = { navController.popBackStack() })
+                    }
+                    composable(
+                        ROUTE_QUESTS,
+                        arguments = listOf(navArgument("sessionId") { type = NavType.StringType })
+                    ) { backStackEntry ->
+                        val sessionId = backStackEntry.arguments?.getString("sessionId").orEmpty()
+                        QuestsScreen(sessionId = sessionId, onBack = { navController.popBackStack() })
                     }
                 }
             }

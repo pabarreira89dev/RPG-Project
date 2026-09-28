@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Person
@@ -59,6 +60,7 @@ fun NarrationScreen(
     onBack: () -> Unit,
     onNavigateToNpcs: (String) -> Unit,
     onNavigateToInventory: (String) -> Unit,
+    onNavigateToQuests: (String) -> Unit,
     viewModel: NarrationViewModel = viewModel(
         factory = viewModelFactory { initializer { NarrationViewModel(sessionId) } }
     )
@@ -100,6 +102,9 @@ fun NarrationScreen(
                     }
                     IconButton(onClick = { onNavigateToInventory(sessionId) }) {
                         Icon(Icons.Default.Inventory2, contentDescription = "Inventario")
+                    }
+                    IconButton(onClick = { onNavigateToQuests(sessionId) }) {
+                        Icon(Icons.Default.Assignment, contentDescription = "Misiones")
                     }
                     IconButton(onClick = { showDeleteConfirmation = true }) {
                         Icon(Icons.Default.Delete, contentDescription = "Eliminar partida")
