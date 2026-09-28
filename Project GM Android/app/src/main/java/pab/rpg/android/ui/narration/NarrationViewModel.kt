@@ -21,6 +21,8 @@ const val ROLE_SYSTEM = "SYSTEM"
 
 private data class PendingAction(val text: String, val idempotencyKey: String)
 
+private const val MAX_AUTO_RETRIES = 3
+
 data class NarrationUiState(
     val isLoadingSession: Boolean = false,
     val session: SessionResponse? = null,
@@ -45,6 +47,8 @@ class NarrationViewModel(
     // Tracks the session's optimistic-lock version and the one in-flight/failed action, if any.
     private var expectedVersion: Long = 0
     private var pendingAction: PendingAction? = null
+    // Bounds silent auto-retries on 409 STALE_SESSION_VERSION before falling back to the manual button.
+    private var staleRetryCount: Int = 0
 
     init {
         loadSession()
@@ -79,6 +83,7 @@ class NarrationViewModel(
 
         val action = PendingAction(text, UUID.randomUUID().toString())
         pendingAction = action
+        staleRetryCount = 0
         _uiState.update { it.copy(inputText = "", isSending = true, errorMessage = null, canRetry = false) }
 
         viewModelScope.launch {
@@ -90,6 +95,7 @@ class NarrationViewModel(
     fun retry() {
         val action = pendingAction ?: return
         if (_uiState.value.isSending) return
+        staleRetryCount = 0
         _uiState.update { it.copy(isSending = true, errorMessage = null, canRetry = false) }
         viewModelScope.launch { submit(action) }
     }
@@ -113,9 +119,16 @@ class NarrationViewModel(
     private suspend fun handleFailure(error: Throwable) {
         when ((error as? ApiException)?.apiError?.code) {
             "STALE_SESSION_VERSION" -> {
-                // Nothing committed server-side: resync the version and let the player retry the same text.
+                // Nothing committed server-side: resync the version and retry the same text automatically.
                 sessionRepository.getSession(sessionId).onSuccess { session -> expectedVersion = session.version }
-                _uiState.update { it.copy(isSending = false, errorMessage = error.toUserMessage(), canRetry = true) }
+                val action = pendingAction
+                if (action != null && staleRetryCount < MAX_AUTO_RETRIES) {
+                    staleRetryCount++
+                    submit(action)
+                } else {
+                    staleRetryCount = 0
+                    _uiState.update { it.copy(isSending = false, errorMessage = error.toUserMessage(), canRetry = true) }
+                }
             }
             "ACTION_NOT_ALLOWED" -> {
                 pendingAction = null
