@@ -31,6 +31,7 @@ object ApiClient {
             .readTimeout(45, TimeUnit.SECONDS)
             .addInterceptor(DevIdentityInterceptor())
             .addInterceptor(AuthInterceptor(authSessionManager))
+            .addInterceptor(AuthFailureInterceptor())
             .authenticator(AuthAuthenticator(authSessionManager))
             .apply {
                 if (BuildConfig.DEBUG) {

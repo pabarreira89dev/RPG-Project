@@ -4,12 +4,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import pab.rpg.android.network.ApiClient
+import pab.rpg.android.network.AuthEvents
 import pab.rpg.android.ui.combat.CombatScreen
 import pab.rpg.android.ui.inventory.InventoryScreen
 import pab.rpg.android.ui.login.LoginScreen
@@ -37,6 +39,16 @@ class MainActivity : ComponentActivity() {
         setContent {
             val navController = rememberNavController()
             val startDestination = if (ApiClient.authSessionManager.isLoggedIn()) ROUTE_SESSIONS else ROUTE_LOGIN
+
+            // Reacts to a 401/403 from ANY screen, not just the ones that check for it explicitly.
+            LaunchedEffect(Unit) {
+                AuthEvents.authFailures.collect {
+                    ApiClient.authSessionManager.logout()
+                    navController.navigate(ROUTE_LOGIN) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            }
 
             ProjectGmTheme {
                 NavHost(navController = navController, startDestination = startDestination) {

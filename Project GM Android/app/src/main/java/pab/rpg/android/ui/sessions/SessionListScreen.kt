@@ -101,19 +101,6 @@ fun SessionListScreen(
                 uiState.isLoading && uiState.sessions.isEmpty() -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
-                // No confirmation here on purpose: there's no active session left to protect, and the
-                // user already needs to re-authenticate one way or another.
-                uiState.isSessionExpired -> {
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .padding(24.dp)
-                    ) {
-                        Text("Tu sesión ha caducado. Vuelve a iniciar sesión para continuar.")
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = onLogout) { Text("Reiniciar sesión") }
-                    }
-                }
                 uiState.errorMessage != null -> {
                     Column(
                         modifier = Modifier
