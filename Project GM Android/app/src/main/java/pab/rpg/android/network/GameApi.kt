@@ -2,6 +2,8 @@ package pab.rpg.android.network
 
 import pab.rpg.android.network.dto.ActionResponse
 import pab.rpg.android.network.dto.CreateSessionRequest
+import pab.rpg.android.network.dto.InventoryResponse
+import pab.rpg.android.network.dto.ItemResponse
 import pab.rpg.android.network.dto.NpcResponse
 import pab.rpg.android.network.dto.SessionResponse
 import pab.rpg.android.network.dto.SubmitActionRequest
@@ -12,7 +14,7 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
 
-// Sessions + Actions + NPCs endpoints for now (MVP v0.4 steps 1-3); items/quests/combat follow in later steps.
+// Sessions + Actions + NPCs + Items endpoints for now (MVP v0.4 steps 1-4); quests/combat follow in later steps.
 interface GameApi {
 
     @GET("api/v1/sessions")
@@ -30,6 +32,12 @@ interface GameApi {
 
     @GET("api/v1/sessions/{sessionId}/npcs")
     suspend fun getNpcs(@Path("sessionId") sessionId: String): List<NpcResponse>
+
+    @GET("api/v1/sessions/{sessionId}/items")
+    suspend fun getInventory(@Path("sessionId") sessionId: String): InventoryResponse
+
+    @POST("api/v1/sessions/{sessionId}/items/{itemId}/pick-up")
+    suspend fun pickUpItem(@Path("sessionId") sessionId: String, @Path("itemId") itemId: String): ItemResponse
 
     @POST("api/v1/sessions/{sessionId}/actions")
     suspend fun submitAction(@Path("sessionId") sessionId: String, @Body request: SubmitActionRequest): ActionResponse

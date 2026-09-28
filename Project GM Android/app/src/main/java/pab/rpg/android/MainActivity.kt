@@ -10,6 +10,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import pab.rpg.android.network.ApiClient
+import pab.rpg.android.ui.inventory.InventoryScreen
 import pab.rpg.android.ui.login.LoginScreen
 import pab.rpg.android.ui.login.RegisterScreen
 import pab.rpg.android.ui.narration.NarrationScreen
@@ -22,6 +23,7 @@ private const val ROUTE_REGISTER = "register"
 private const val ROUTE_SESSIONS = "sessions"
 private const val ROUTE_NARRATION = "narration/{sessionId}"
 private const val ROUTE_NPCS = "npcs/{sessionId}"
+private const val ROUTE_INVENTORY = "inventory/{sessionId}"
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,7 +54,13 @@ class MainActivity : ComponentActivity() {
                     }
                     composable(ROUTE_SESSIONS) {
                         SessionListScreen(
-                            onSessionClick = { sessionId -> navController.navigate("narration/$sessionId") }
+                            onSessionClick = { sessionId -> navController.navigate("narration/$sessionId") },
+                            onLogout = {
+                                ApiClient.authSessionManager.logout()
+                                navController.navigate(ROUTE_LOGIN) {
+                                    popUpTo(ROUTE_SESSIONS) { inclusive = true }
+                                }
+                            }
                         )
                     }
                     composable(
@@ -63,7 +71,8 @@ class MainActivity : ComponentActivity() {
                         NarrationScreen(
                             sessionId = sessionId,
                             onBack = { navController.popBackStack() },
-                            onNavigateToNpcs = { navController.navigate("npcs/$sessionId") }
+                            onNavigateToNpcs = { navController.navigate("npcs/$sessionId") },
+                            onNavigateToInventory = { navController.navigate("inventory/$sessionId") }
                         )
                     }
                     composable(
@@ -72,6 +81,13 @@ class MainActivity : ComponentActivity() {
                     ) { backStackEntry ->
                         val sessionId = backStackEntry.arguments?.getString("sessionId").orEmpty()
                         NpcsScreen(sessionId = sessionId, onBack = { navController.popBackStack() })
+                    }
+                    composable(
+                        ROUTE_INVENTORY,
+                        arguments = listOf(navArgument("sessionId") { type = NavType.StringType })
+                    ) { backStackEntry ->
+                        val sessionId = backStackEntry.arguments?.getString("sessionId").orEmpty()
+                        InventoryScreen(sessionId = sessionId, onBack = { navController.popBackStack() })
                     }
                 }
             }

@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -57,6 +58,7 @@ fun NarrationScreen(
     sessionId: String,
     onBack: () -> Unit,
     onNavigateToNpcs: (String) -> Unit,
+    onNavigateToInventory: (String) -> Unit,
     viewModel: NarrationViewModel = viewModel(
         factory = viewModelFactory { initializer { NarrationViewModel(sessionId) } }
     )
@@ -95,6 +97,9 @@ fun NarrationScreen(
                 actions = {
                     IconButton(onClick = { onNavigateToNpcs(sessionId) }) {
                         Icon(Icons.Default.Person, contentDescription = "NPCs")
+                    }
+                    IconButton(onClick = { onNavigateToInventory(sessionId) }) {
+                        Icon(Icons.Default.Inventory2, contentDescription = "Inventario")
                     }
                     IconButton(onClick = { showDeleteConfirmation = true }) {
                         Icon(Icons.Default.Delete, contentDescription = "Eliminar partida")

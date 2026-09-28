@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -18,6 +19,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -41,10 +43,12 @@ import pab.rpg.android.network.dto.SessionResponse
 @Composable
 fun SessionListScreen(
     onSessionClick: (String) -> Unit,
+    onLogout: () -> Unit,
     viewModel: SessionListViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
+    var showLogoutConfirmation by remember { mutableStateOf(false) }
 
     if (showCreateDialog) {
         CreateSessionDialog(
@@ -56,8 +60,32 @@ fun SessionListScreen(
         )
     }
 
+    if (showLogoutConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showLogoutConfirmation = false },
+            title = { Text("Cerrar sesión") },
+            text = { Text("¿Seguro que quieres cerrar sesión?") },
+            confirmButton = {
+                Button(onClick = {
+                    showLogoutConfirmation = false
+                    onLogout()
+                }) { Text("Cerrar sesión") }
+            },
+            dismissButton = { TextButton(onClick = { showLogoutConfirmation = false }) { Text("Cancelar") } }
+        )
+    }
+
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Project GM") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Project GM") },
+                actions = {
+                    IconButton(onClick = { showLogoutConfirmation = true }) {
+                        Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Cerrar sesión")
+                    }
+                }
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = { showCreateDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Nueva partida")
@@ -72,6 +100,19 @@ fun SessionListScreen(
             when {
                 uiState.isLoading && uiState.sessions.isEmpty() -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                }
+                // No confirmation here on purpose: there's no active session left to protect, and the
+                // user already needs to re-authenticate one way or another.
+                uiState.isSessionExpired -> {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(24.dp)
+                    ) {
+                        Text("Tu sesión ha caducado. Vuelve a iniciar sesión para continuar.")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(onClick = onLogout) { Text("Reiniciar sesión") }
+                    }
                 }
                 uiState.errorMessage != null -> {
                     Column(

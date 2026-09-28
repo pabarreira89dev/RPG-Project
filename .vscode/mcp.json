@@ -1,0 +1,25 @@
+{
+	"inputs": [
+		{
+			"id": "mysql_password",
+			"type": "promptString",
+			"description": "Contraseña de MySQL (project_gm_cloud_user)",
+			"password": true
+		}
+	],
+	"servers": {
+		"mysql-project-gm": {
+			"command": "npx",
+			"args": [
+				"-y",
+				"@executeautomation/database-server",
+				"--mysql",
+				"--host", "localhost",
+				"--database", "project_gm_cloud",
+				"--port", "3306",
+				"--user", "project_gm_cloud_user",
+				"--password", "${input:mysql_password}"
+			]
+		}
+	}
+}
