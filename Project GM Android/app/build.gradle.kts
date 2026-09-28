@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -96,4 +98,33 @@ dependencies {
 
     // Only the "cloud" flavor needs encrypted token storage.
     "cloudImplementation"(libs.androidx.security.crypto)
+}
+
+// adb reverse mappings are torn down whenever the device reconnects/reboots or the adb server restarts,
+// so re-apply them before every install; a missing device/sdk.dir just skips silently instead of failing the build.
+tasks.register("adbReversePorts") {
+    group = "install"
+    description = "Re-applies adb reverse tcp:8080/tcp:9000 for a USB-connected physical device (see API_BASE_URL in this file)."
+    doLast {
+        // "java" resolves to this module's JavaPluginExtension accessor here, not the java.util package, hence the import above.
+        val localProperties = Properties().apply {
+            rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+        }
+        val sdkDir = localProperties.getProperty("sdk.dir")
+        if (sdkDir == null) {
+            logger.warn("adbReversePorts: no sdk.dir in local.properties, skipping.")
+            return@doLast
+        }
+        val adbSuffix = if (System.getProperty("os.name").lowercase().contains("win")) "adb.exe" else "adb"
+        val adb = File(sdkDir, "platform-tools/$adbSuffix")
+        listOf(8080, 9000).forEach { port ->
+            ProcessBuilder(adb.absolutePath, "reverse", "tcp:$port", "tcp:$port").redirectErrorStream(true).start().waitFor()
+        }
+    }
+}
+
+tasks.configureEach {
+    if (name.startsWith("install")) {
+        dependsOn("adbReversePorts")
+    }
 }

@@ -1,6 +1,7 @@
 package pab.rpg.android.network
 
 import android.content.Context
+import java.util.concurrent.TimeUnit
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -23,6 +24,11 @@ object ApiClient {
 
     private val okHttpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
+            // OkHttp defaults (10s) are shorter than the backend's own OpenAI budget (connect+read up to 25s,
+            // see OPENAI_CONNECT_TIMEOUT/OPENAI_READ_TIMEOUT), which caused client timeouts on slow-but-successful narrations.
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .writeTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(45, TimeUnit.SECONDS)
             .addInterceptor(DevIdentityInterceptor())
             .addInterceptor(AuthInterceptor(authSessionManager))
             .authenticator(AuthAuthenticator(authSessionManager))
