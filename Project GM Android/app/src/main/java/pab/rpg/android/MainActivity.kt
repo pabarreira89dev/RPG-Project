@@ -10,6 +10,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import pab.rpg.android.network.ApiClient
+import pab.rpg.android.ui.combat.CombatScreen
 import pab.rpg.android.ui.inventory.InventoryScreen
 import pab.rpg.android.ui.login.LoginScreen
 import pab.rpg.android.ui.login.RegisterScreen
@@ -26,6 +27,7 @@ private const val ROUTE_NARRATION = "narration/{sessionId}"
 private const val ROUTE_NPCS = "npcs/{sessionId}"
 private const val ROUTE_INVENTORY = "inventory/{sessionId}"
 private const val ROUTE_QUESTS = "quests/{sessionId}"
+private const val ROUTE_COMBAT = "combat/{sessionId}"
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,7 +77,8 @@ class MainActivity : ComponentActivity() {
                             onBack = { navController.popBackStack() },
                             onNavigateToNpcs = { navController.navigate("npcs/$sessionId") },
                             onNavigateToInventory = { navController.navigate("inventory/$sessionId") },
-                            onNavigateToQuests = { navController.navigate("quests/$sessionId") }
+                            onNavigateToQuests = { navController.navigate("quests/$sessionId") },
+                            onNavigateToCombat = { navController.navigate("combat/$sessionId") }
                         )
                     }
                     composable(
@@ -83,7 +86,11 @@ class MainActivity : ComponentActivity() {
                         arguments = listOf(navArgument("sessionId") { type = NavType.StringType })
                     ) { backStackEntry ->
                         val sessionId = backStackEntry.arguments?.getString("sessionId").orEmpty()
-                        NpcsScreen(sessionId = sessionId, onBack = { navController.popBackStack() })
+                        NpcsScreen(
+                            sessionId = sessionId,
+                            onBack = { navController.popBackStack() },
+                            onNavigateToCombat = { navController.navigate("combat/$sessionId") }
+                        )
                     }
                     composable(
                         ROUTE_INVENTORY,
@@ -98,6 +105,13 @@ class MainActivity : ComponentActivity() {
                     ) { backStackEntry ->
                         val sessionId = backStackEntry.arguments?.getString("sessionId").orEmpty()
                         QuestsScreen(sessionId = sessionId, onBack = { navController.popBackStack() })
+                    }
+                    composable(
+                        ROUTE_COMBAT,
+                        arguments = listOf(navArgument("sessionId") { type = NavType.StringType })
+                    ) { backStackEntry ->
+                        val sessionId = backStackEntry.arguments?.getString("sessionId").orEmpty()
+                        CombatScreen(sessionId = sessionId, onBack = { navController.popBackStack() })
                     }
                 }
             }

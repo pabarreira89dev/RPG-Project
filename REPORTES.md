@@ -22,3 +22,22 @@ alcance nuevo, sino de comportamientos existentes que deben pulirse. Añadir ent
   furia, pero no se creó ninguna fila en `relationship` ni se disparó combate. Revisar si `PHYSICAL`/otras
   acciones contra un NPC concreto deberían también mover su relación (y/o disparar reglas de
   hostilidad/combate), no solo `SOCIAL`.
+
+- **(2026-09-28) El combate solo se puede iniciar de forma explícita, no desde la ventana de narración.** Hoy
+  `CombatService.startCombat` solo acepta `npcIds` explícitos (`POST /combat/start`), y el clasificador general
+  de acciones libres (`MasterAdapter.interpret`, usado por `POST /actions`) no tiene ningún `ActionType.ATTACK`
+  — `PHYSICAL` (la acción más parecida a "atacar") se resuelve como una tirada narrativa cosmética en
+  `ActionServiceImpl` sin tocar el subsistema de Combate en absoluto (sin crear `CombatParticipant`, sin aplicar
+  daño). En el cliente Android, esto obliga a iniciar combate desde un botón explícito en `NpcsScreen`, en vez
+  de poder escribir algo como "ataco al guardia" en la propia pantalla de Narración. Revisar en el futuro si el
+  motor debería poder interpretar esa intención desde la ventana de narración (texto libre) y arrancar combate
+  automáticamente contra el NPC objetivo, en vez de requerir siempre una acción explícita fuera del chat.
+
+- **(2026-09-28) El orden de turnos no favorece a quien inicia el combate.** Hoy `CombatServiceImpl.startCombat`
+  calcula la iniciativa de TODOS los participantes (jugador y NPCs) por igual, como `d20 + modificador de
+  Agilidad` (`rollInitiative`, `SecureRandom` sin auditar) y ordena por ese valor descendente — quien inicia el
+  ataque no tiene ninguna ventaja narrativa de "primer golpe", puede perfectamente perder la tirada y que el NPC
+  actúe primero pese a haber sido sorprendido. Revisar si el orden de ataque debería establecerse en base a
+  quién inicia la acción (ese participante golpea primero, sin tirada), y que el orden de turnos A PARTIR de ese
+  primer golpe se derive de comparar los valores de "prisa"/"rapidez"/Agilidad del personaje del jugador y del
+  NPC, en vez del `d20 + Agilidad` actual para todos por igual.

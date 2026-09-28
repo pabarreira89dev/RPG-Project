@@ -2,12 +2,15 @@ package pab.rpg.android.network
 
 import pab.rpg.android.network.dto.ActionResponse
 import pab.rpg.android.network.dto.AdvanceQuestRequest
+import pab.rpg.android.network.dto.CombatResponse
 import pab.rpg.android.network.dto.CreateSessionRequest
 import pab.rpg.android.network.dto.InventoryResponse
 import pab.rpg.android.network.dto.ItemResponse
 import pab.rpg.android.network.dto.NpcResponse
+import pab.rpg.android.network.dto.PerformAttackRequest
 import pab.rpg.android.network.dto.QuestStateResponse
 import pab.rpg.android.network.dto.SessionResponse
+import pab.rpg.android.network.dto.StartCombatRequest
 import pab.rpg.android.network.dto.SubmitActionRequest
 import retrofit2.Response
 import retrofit2.http.Body
@@ -16,7 +19,7 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
 
-// Sessions + Actions + NPCs + Items + Quests endpoints for now (MVP v0.4 steps 1-5); combat follows later.
+// Sessions + Actions + NPCs + Items + Quests + Combat endpoints (full MVP v0.4 scope).
 interface GameApi {
 
     @GET("api/v1/sessions")
@@ -59,4 +62,20 @@ interface GameApi {
         @Path("questCode") questCode: String,
         @Body request: AdvanceQuestRequest
     ): QuestStateResponse
+
+    @GET("api/v1/sessions/{sessionId}/combat")
+    suspend fun getCombat(@Path("sessionId") sessionId: String): CombatResponse
+
+    @POST("api/v1/sessions/{sessionId}/combat/start")
+    suspend fun startCombat(
+        @Path("sessionId") sessionId: String,
+        @Body request: StartCombatRequest
+    ): CombatResponse
+
+    @POST("api/v1/sessions/{sessionId}/combat/{combatId}/attack")
+    suspend fun attack(
+        @Path("sessionId") sessionId: String,
+        @Path("combatId") combatId: String,
+        @Body request: PerformAttackRequest
+    ): CombatResponse
 }

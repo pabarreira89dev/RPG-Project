@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -61,6 +62,7 @@ fun NarrationScreen(
     onNavigateToNpcs: (String) -> Unit,
     onNavigateToInventory: (String) -> Unit,
     onNavigateToQuests: (String) -> Unit,
+    onNavigateToCombat: (String) -> Unit,
     viewModel: NarrationViewModel = viewModel(
         factory = viewModelFactory { initializer { NarrationViewModel(sessionId) } }
     )
@@ -105,6 +107,9 @@ fun NarrationScreen(
                     }
                     IconButton(onClick = { onNavigateToQuests(sessionId) }) {
                         Icon(Icons.Default.Assignment, contentDescription = "Misiones")
+                    }
+                    IconButton(onClick = { onNavigateToCombat(sessionId) }) {
+                        Icon(Icons.Default.Shield, contentDescription = "Combate")
                     }
                     IconButton(onClick = { showDeleteConfirmation = true }) {
                         Icon(Icons.Default.Delete, contentDescription = "Eliminar partida")
